@@ -1,42 +1,23 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.utils.logger import logger
+
 from app.core.config import settings
-from app.database.connection import get_database
+from app.database.connection import connect_to_mongodb, close_mongodb_connection
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await connect_to_mongodb()
+    yield
+    await close_mongodb_connection()
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version=settings.APP_VERSION
+    version=settings.APP_VERSION,
+    lifespan=lifespan
 )
-
-# Log when the application starts
-logger.info("Smart Medicine System API Started Successfully")
-
 
 @app.get("/")
 async def root():
-
-    # Log when the root API is accessed
-    logger.info("Root API Accessed")
-
     return {
-        "message": "Welcome to Smart Medicine System API"
-    }
-
-
-@app.get("/database")
-async def test_database():
-
-    # Log database API access
-    logger.info("Database Connection Test API Accessed")
-
-    db = get_database()
-
-    collections = await db.list_collection_names()
-
-    logger.info("Database Connected Successfully")
-
-    return {
-        "status": "Connected Successfully",
-        "database": settings.DATABASE_NAME,
-        "collections": collections
+        "message": "Smart Medicine Availability & Intelligent Janaushadhi Recommendation System Backend is Running"
     }

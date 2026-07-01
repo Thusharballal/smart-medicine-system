@@ -1,3 +1,11 @@
 2026-06-30 17:54:53,603 | INFO | Logger Test - INFO
 2026-06-30 17:54:53,605 | WARNING | Logger Test - WARNING
 2026-06-30 17:54:53,605 | ERROR | Logger Test - ERROR
+2026-07-01 20:51:16,540 | INFO | MongoDB connected successfully.
+2026-07-01 21:11:25,553 | INFO | MongoDB connection closed.
+2026-07-01 21:11:27,901 | INFO | MongoDB connected successfully.
+2026-07-01 21:11:34,020 | INFO | MongoDB connection closed.
+2026-07-01 21:11:36,481 | INFO | MongoDB connected successfully.
+2026-07-01 21:11:44,365 | INFO | MongoDB connection closed.
+2026-07-01 21:11:46,660 | INFO | MongoDB connected successfully.
+2026-07-01 21:29:12,543 | INFO | MongoDB connection closed.

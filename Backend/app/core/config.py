@@ -1,30 +1,20 @@
-from pydantic_settings import BaseSettings
-
-
+from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
-    # ===========================
-    # Application Settings
-    # ===========================
     APP_NAME: str
     APP_VERSION: str
     APP_ENV: str
     DEBUG: bool
-
-    # ===========================
-    # Server Settings
-    # ===========================
     HOST: str
     PORT: int
-
-    # ===========================
-    # MongoDB Settings
-    # ===========================
-    MONGODB_URI: str
+    MONGODB_URL: str
     DATABASE_NAME: str
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore"
+    )
 
 settings = Settings()
