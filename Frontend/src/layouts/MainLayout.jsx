@@ -1,60 +1,38 @@
-import React, { useState } from 'react'
-import { Outlet } from 'react-router-dom'
-import Navbar from '../components/layout/Navbar'
-import Footer from '../components/layout/Footer'
-import Breadcrumb from '../components/common/Breadcrumb'
-import { useAuth } from '../contexts/AuthContext'
-import { useTheme } from '../contexts/ThemeContext'
-import { useNotifications } from '../contexts/NotificationContext'
-import ErrorBoundary from '../components/common/ErrorBoundary'
-
 /**
- * MainLayout – wraps all public-facing pages.
+ * Main Layout
+ *
+ * Public-facing layout: landing page, medicine search (unauthenticated),
+ * nearby pharmacies (unauthenticated), and static pages.
  *
  * Structure:
- *   <Navbar>
- *     <main id="main-content">
- *       <Breadcrumb>
- *       <Outlet />  ← page rendered here
- *     </main>
- *   <Footer>
- *
- * Req 10.1 – top nav on all pages.
- * Req 10.6 – breadcrumb trail on all pages.
- * Req 10.7 – footer on public pages.
+ *   ┌──────────────────────────────┐
+ *   │         Navbar               │  sticky top
+ *   ├──────────────────────────────┤
+ *   │  <Outlet /> (flex-1)         │  page content
+ *   ├──────────────────────────────┤
+ *   │         Footer               │
+ *   └──────────────────────────────┘
  */
-function MainLayout({ routeLabels }) {
-  const { user, logout } = useAuth()
-  const { theme, toggleTheme } = useTheme()
-  const { unreadCount } = useNotifications()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+import { Outlet } from 'react-router-dom'
+import { Navbar, Footer } from '../components/navigation'
+import { PUBLIC_NAV_LINKS } from '../constants/navConfig'
+import { useAuth } from '../contexts/AuthContext'
+
+function MainLayout() {
+  const { currentUser, isAuthenticated, logout } = useAuth()
 
   return (
-    <div
-      className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-950"
-      lang="en"
-    >
+    <div className="flex min-h-screen flex-col">
       <Navbar
-        user={user}
+        navLinks={PUBLIC_NAV_LINKS}
+        showAuth={!isAuthenticated}
+        user={isAuthenticated ? currentUser : null}
         onLogout={logout}
-        unreadCount={unreadCount}
-        theme={theme}
-        onThemeToggle={toggleTheme}
-        onMenuToggle={() => setIsMobileMenuOpen((o) => !o)}
-        isSidebarOpen={isMobileMenuOpen}
       />
 
-      <main
-        id="main-content"
-        className="flex-1 w-full"
-        tabIndex={-1}
-      >
-        {/* Breadcrumb is shown on inner pages; on the home page it renders nothing */}
-        <Breadcrumb routeLabels={routeLabels} className="max-w-screen-xl mx-auto px-4 sm:px-6 pt-4" />
-
-        <ErrorBoundary>
-          <Outlet />
-        </ErrorBoundary>
+      <main className="flex-1 page-enter" id="main-content" tabIndex={-1}>
+        <Outlet />
       </main>
 
       <Footer />

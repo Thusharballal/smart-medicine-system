@@ -1,88 +1,73 @@
-import React from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { RiHome5Line, RiArrowRightSLine } from 'react-icons/ri'
-
 /**
- * Breadcrumb – automatic route-aware breadcrumb trail.
+ * Breadcrumb Component
  *
- * Can be used in two modes:
+ * Purpose : Hierarchical navigation trail showing the user's
+ *           current location within the application.
+ * Location : src/components/common/Breadcrumb.jsx
  *
- * 1. Auto mode – pass `routeLabels` map; component derives crumbs from useLocation.
- *    routeLabels: { '/dashboard/user': 'My Dashboard', '/medicines': 'Medicines', … }
+ * Features :
+ *   - ARIA nav + aria-label="Breadcrumb"
+ *   - aria-current="page" on last item
+ *   - Configurable separator (default chevron)
+ *   - Home icon on first item (optional)
+ *   - Truncation for deep hierarchies
+ *   - React Router Link for all non-current items
  *
- * 2. Manual mode – pass explicit `items` array.
- *    items: [{ label: 'Home', href: '/' }, { label: 'Medicines', href: '/medicines' }, { label: 'Paracetamol' }]
+ * Future usage : Module 4 (Medicine Detail page),
+ *   Module 5 (Pharmacy → Inventory), Module 6 (Admin → Users → Edit).
  *
- * Props:
- *   items        – manual breadcrumb items (array of { label, href? })
- *   routeLabels  – path → label map for auto mode
- *   showHome     – prepend a home icon crumb (default: true)
- *   className    – extra wrapper classes
+ * @param {Array}  props.items — [{ label, to? }]  last item = current page
+ * @param {boolean} [props.showHome=true]
+ * @param {string}  [props.className]
  */
 
-function Breadcrumb({ items, routeLabels = {}, showHome = true, className = '' }) {
-  const location = useLocation()
+import { Link } from 'react-router-dom'
+import { HiOutlineHome, HiChevronRight } from 'react-icons/hi2'
 
-  // Auto-derive crumbs from the current path if items not provided
-  const crumbs = items ?? (() => {
-    const segments = location.pathname.split('/').filter(Boolean)
-    return segments.map((seg, idx) => {
-      const href = '/' + segments.slice(0, idx + 1).join('/')
-      const label = routeLabels[href] ?? seg.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-      return { label, href }
-    })
-  })()
-
-  const allCrumbs = showHome ? [{ label: 'Home', href: '/', icon: true }, ...crumbs] : crumbs
+function Breadcrumb({ items = [], showHome = true, className = '' }) {
+  const all = showHome
+    ? [{ label: 'Home', to: '/', isHome: true }, ...items]
+    : items
 
   return (
-    <nav aria-label="Breadcrumb" className={className}>
-      <ol
-        className="flex flex-wrap items-center gap-1 text-sm text-gray-500 dark:text-gray-400"
-        role="list"
-      >
-        {allCrumbs.map((crumb, idx) => {
-          const isLast = idx === allCrumbs.length - 1
+    <nav
+      aria-label="Breadcrumb"
+      className={`flex items-center ${className}`}
+    >
+      <ol className="flex items-center flex-wrap gap-1" role="list">
+        {all.map((item, index) => {
+          const isLast = index === all.length - 1
 
           return (
-            <li key={idx} className="flex items-center gap-1">
-              {idx > 0 && (
-                <RiArrowRightSLine
-                  size={16}
-                  className="text-gray-400 dark:text-gray-600 shrink-0"
+            <li key={index} className="flex items-center gap-1">
+              {/* Separator (skip before first item) */}
+              {index > 0 && (
+                <HiChevronRight
+                  size={14}
+                  className="text-slate-400 shrink-0"
                   aria-hidden="true"
                 />
               )}
 
               {isLast ? (
+                /* Current page — not a link */
                 <span
                   aria-current="page"
-                  className="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[180px]"
+                  className="text-xs font-medium text-slate-700"
                 >
-                  {crumb.icon ? (
-                    <span className="flex items-center gap-1">
-                      <RiHome5Line size={15} aria-hidden="true" />
-                      <span className="sr-only">Home</span>
-                    </span>
-                  ) : (
-                    crumb.label
-                  )}
+                  {item.isHome
+                    ? <HiOutlineHome size={14} aria-hidden="true" />
+                    : item.label}
                 </span>
               ) : (
+                /* Ancestor — link */
                 <Link
-                  to={crumb.href}
-                  className="hover:text-primary-900 dark:hover:text-primary-400 transition-colors
-                             truncate max-w-[180px] focus-visible:outline-none
-                             focus-visible:ring-1 focus-visible:ring-primary-600 rounded"
+                  to={item.to ?? '/'}
+                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-primary-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
                 >
-                  {crumb.icon ? (
-                    <span className="flex items-center gap-1">
-                      <RiHome5Line size={15} aria-hidden="true" />
-                      <span className="sr-only">Home</span>
-                    </span>
-                  ) : (
-                    crumb.label
-                  )}
+                  {item.isHome
+                    ? <HiOutlineHome size={14} aria-hidden="true" />
+                    : item.label}
                 </Link>
               )}
             </li>

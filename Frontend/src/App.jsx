@@ -1,37 +1,67 @@
-import React from 'react'
-import { ThemeProvider } from './contexts/ThemeContext'
-import { AuthProvider } from './contexts/AuthContext'
-import { NotificationProvider } from './contexts/NotificationContext'
-import { MedicineProvider } from './contexts/MedicineContext'
-import { ToastProvider } from './components/common/Toast'
-import AppRoutes from './routes/AppRoutes'
-
 /**
- * App – root component.
+ * Component: ApplicationRouter
  *
- * Provider order (outermost → innermost):
- *   ThemeProvider        – must be outermost so dark class applies to <html>
- *   AuthProvider         – provides user/token state
- *   NotificationProvider – provides notification state
- *   ToastProvider        – provides imperative toast API
- *   AppRoutes            – all routes with lazy loading
+ * Description:
+ *   Integrates the complete frontend workflow including navigation,
+ *   layouts, protected routes, authentication flow, dashboards,
+ *   and application level providers.
  *
- * Note: BrowserRouter is provided in main.jsx so it wraps the entire tree.
+ * Responsibilities:
+ *   - Renders the application router (AppRouter)
+ *   - Guards against offline state (shows OfflinePage)
+ *   - Shows global application loading state during auth rehydration
+ *   - Provides the session guard placeholder hook
+ *
+ * Architecture:
+ *   All global providers are set up in main.jsx.
+ *   This component is the first consumer of those providers.
+ *
+ * Backend readiness:
+ *   - Session guard is disabled (enabled=false) until JWT backend is ready
+ *   - Offline detection is active (browser native API, no backend needed)
+ *   - Auth rehydration loading state wired to AuthContext.isLoading
  */
+
+import AppRouter     from './routes/AppRouter'
+import OfflinePage   from './pages/errors/OfflinePage'
+import { Spinner }   from './components/feedback'
+import { useAuth }   from './contexts/AuthContext'
+import useOnlineStatus from './hooks/useOnlineStatus'
+import useSessionGuard from './hooks/useSessionGuard'
+
+// =====================================================
+// Global Providers
+// =====================================================
+
 function App() {
-  return (
-    <ThemeProvider>
-      <AuthProvider>
-        <NotificationProvider>
-          <MedicineProvider>
-            <ToastProvider>
-              <AppRoutes />
-            </ToastProvider>
-          </MedicineProvider>
-        </NotificationProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  )
+  const { isLoading } = useAuth()
+  const { isOnline }  = useOnlineStatus()
+
+  // ── Session guard (disabled until backend JWT is ready) ────────────────
+  // TODO: Set enabled=true and wire onTimeout to logout after Module 14+
+  useSessionGuard({ enabled: false })
+
+  // =====================================================
+  // Application Router
+  // =====================================================
+
+  // Offline state — show offline page instead of crashing
+  if (!isOnline) {
+    return <OfflinePage />
+  }
+
+  // Auth rehydration loading state (localStorage restore on page refresh)
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner size="lg" color="primary" label="Loading Smart Medicine System…" />
+        </div>
+      </div>
+    )
+  }
+
+  return <AppRouter />
 }
 
 export default App

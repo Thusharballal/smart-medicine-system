@@ -1,14 +1,14 @@
-export { default as Button } from './Button'
-export { default as Input } from './Input'
-export { default as Loader } from './Loader'
-export { default as SkeletonLoader } from './SkeletonLoader'
-export { default as Modal } from './Modal'
-export { default as Toast, ToastProvider, useToast } from './Toast'
-export { default as ConfirmDialog } from './ConfirmDialog'
-export { default as Pagination } from './Pagination'
+/**
+ * Common Components — barrel export
+ *
+ * Usage:
+ *   import { SearchBar, Breadcrumb, Pagination } from '../components/common'
+ */
+export { default as SearchBar }  from './SearchBar'
 export { default as Breadcrumb } from './Breadcrumb'
-export { default as EmptyState } from './EmptyState'
-export { default as ErrorState } from './ErrorState'
-export { default as ErrorBoundary } from './ErrorBoundary'
-export { default as SearchBar } from './SearchBar'
-export { default as ProfileDropdown } from './ProfileDropdown'
+export { default as Pagination } from './Pagination'
+export { default as AppErrorBoundary } from './AppErrorBoundary'
+export { default as DemoBanner } from './DemoBanner'
+export { default as VoiceSearchModal } from './VoiceSearchModal'
+export { default as OcrScanModal } from './OcrScanModal'
+export { default as NearbyPharmacyModal } from './NearbyPharmacyModal'

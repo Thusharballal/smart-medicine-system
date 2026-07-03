@@ -1,306 +1,88 @@
 <!doctype html>
-<html lang="en" class="light">
+<html lang="en" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
+
+    <!-- Favicon — inline SVG medicine cross for healthcare identity -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Crect x='13' y='6' width='6' height='20' rx='3' fill='white'/%3E%3Crect x='6' y='13' width='20' height='6' rx='3' fill='white'/%3E%3C/svg%3E"
+    />
+
+    <!-- Viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Jan Aushadhi Smart Medicine – Pradhan Mantri Bhartiya Janaushadhi Pariyojana. Find affordable generic medicines and Jan Aushadhi stores near you." />
-    <meta name="theme-color" content="#1a7a3c" />
 
-    <!-- Custom pill favicon in Jan Aushadhi green + orange -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,
-      %3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E
-        %3Crect width='32' height='32' rx='8' fill='%231a7a3c'/%3E
-        %3Ccircle cx='16' cy='16' r='10' fill='none' stroke='white' stroke-width='1.5'/%3E
-        %3Cpath d='M16 6 C10.477 6 6 10.477 6 16 C6 21.523 10.477 26 16 26 Z' fill='white' opacity='0.9'/%3E
-        %3Cpath d='M16 6 C21.523 6 26 10.477 26 16 C26 21.523 21.523 26 16 26 Z' fill='%23ff6b00' opacity='0.85'/%3E
-        %3Cline x1='16' y1='5.5' x2='16' y2='26.5' stroke='white' stroke-width='1.2'/%3E
-      %3C/svg%3E" />
+    <!-- Primary Meta Tags -->
+    <title>Smart Medicine System — Intelligent Janaushadhi Recommendation</title>
+    <meta
+      name="description"
+      content="Smart Medicine Availability & Intelligent Janaushadhi Recommendation System. Search affordable generic medicines, discover PM Jan Aushadhi alternatives, and locate nearby pharmacies across India."
+    />
+    <meta name="keywords" content="Jan Aushadhi, generic medicines, medicine search, affordable healthcare, pharmacy locator, PM Jan Aushadhi, India" />
+    <meta name="author" content="Smart Medicine System — Final Year Engineering Project" />
+    <meta name="robots" content="index, follow" />
 
-    <!-- Google Fonts: Sora (display) + Inter (body) -->
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#2563eb" />
+
+    <!-- Open Graph / Social sharing -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:title"       content="Smart Medicine System — Intelligent Janaushadhi Recommendation" />
+    <meta property="og:description" content="Discover affordable PM Jan Aushadhi generic alternatives, compare medicine prices, and locate nearby pharmacies." />
+    <meta property="og:locale"      content="en_IN" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card"        content="summary" />
+    <meta name="twitter:title"       content="Smart Medicine System" />
+    <meta name="twitter:description" content="Search medicines, discover generic alternatives, locate nearby Jan Aushadhi pharmacies." />
+
+    <!-- Skip-to-content for keyboard users -->
+    <style>
+      .skip-link {
+        position: absolute;
+        top: -100%;
+        left: 0.5rem;
+        z-index: 9999;
+        padding: 0.5rem 1rem;
+        background: #2563eb;
+        color: white;
+        border-radius: 0 0 0.5rem 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: top 0.1s;
+      }
+      .skip-link:focus {
+        top: 0;
+        outline: 2px solid white;
+        outline-offset: 2px;
+      }
+    </style>
+
+    <!-- Inter — primary UI typeface for the design system -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
-
-    <title>Jan Aushadhi – Smart Medicine System | PMBJP</title>
-
-    <!-- ════════════════════════════════════════════════════════════
-         SPLASH SCREEN — Jan Aushadhi Official Branding
-         ════════════════════════════════════════════════════════════ -->
-    <style>
-      /* ── Reset ─────────────────────────────────────────────────── */
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-      /* ── Splash overlay ────────────────────────────────────────── */
-      #splash {
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(160deg, #0d3d1e 0%, #1a7a3c 40%, #0f3520 100%);
-        transition: opacity 0.55s ease, transform 0.55s ease;
-      }
-      #splash.hidden {
-        opacity: 0;
-        transform: scale(1.05);
-        pointer-events: none;
-      }
-
-      /* ── Decorative background rings ────────────────────────────── */
-      .splash-bg-ring {
-        position: absolute;
-        border-radius: 50%;
-        border: 1px solid rgba(255,255,255,0.06);
-        pointer-events: none;
-      }
-
-      /* ── Logo container ─────────────────────────────────────────── */
-      .splash-logo-wrap {
-        position: relative;
-        margin-bottom: 20px;
-        animation: popIn 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-      }
-
-      /* ── Glow ring behind logo ──────────────────────────────────── */
-      .splash-glow {
-        position: absolute;
-        inset: -12px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(74,222,128,0.25) 0%, transparent 70%);
-        animation: pulseGlow 2s ease-in-out infinite;
-      }
-
-      /* ── SVG pill mark ──────────────────────────────────────────── */
-      .splash-pill {
-        width: 90px;
-        height: 90px;
-        position: relative;
-        z-index: 1;
-        filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4));
-      }
-
-      /* ── Brand name ─────────────────────────────────────────────── */
-      .splash-brand {
-        text-align: center;
-        animation: fadeSlideUp 0.5s 0.25s ease-out both;
-      }
-      .splash-brand-title {
-        font-family: 'Sora', 'Inter', Arial, sans-serif;
-        font-size: 2.2rem;
-        font-weight: 800;
-        color: #ffffff;
-        letter-spacing: -0.03em;
-        line-height: 1.05;
-      }
-      .splash-brand-title .green { color: #4ade80; }
-      .splash-brand-title .orange { color: #fb923c; }
-
-      .splash-subtitle {
-        font-family: 'Inter', Arial, sans-serif;
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: rgba(255,255,255,0.55);
-        letter-spacing: 0.04em;
-        margin-top: 4px;
-      }
-
-      /* ── Official scheme badge ───────────────────────────────────── */
-      .splash-pmbjp-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        margin-top: 16px;
-        padding: 7px 16px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(8px);
-        animation: fadeSlideUp 0.5s 0.4s ease-out both;
-      }
-      .splash-pmbjp-badge .flag { font-size: 0.9rem; }
-      .splash-pmbjp-badge .badge-text {
-        font-family: 'Inter', Arial, sans-serif;
-        font-size: 0.65rem;
-        font-weight: 700;
-        color: rgba(255,255,255,0.8);
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-      .splash-pmbjp-badge .dot {
-        width: 4px; height: 4px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.4);
-      }
-
-      /* ── Official tagline ────────────────────────────────────────── */
-      .splash-tagline {
-        margin-top: 10px;
-        font-family: 'Inter', Arial, sans-serif;
-        font-size: 0.72rem;
-        font-style: italic;
-        color: rgba(255,255,255,0.45);
-        animation: fadeSlideUp 0.5s 0.5s ease-out both;
-      }
-      .splash-tagline .hindi { font-style: normal; font-weight: 600; color: rgba(255,255,255,0.65); }
-
-      /* ── Progress bar ────────────────────────────────────────────── */
-      .splash-progress-track {
-        width: 120px;
-        height: 2px;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.12);
-        margin-top: 32px;
-        overflow: hidden;
-        animation: fadeSlideUp 0.5s 0.6s ease-out both;
-      }
-      .splash-progress-fill {
-        height: 100%;
-        border-radius: 999px;
-        background: linear-gradient(to right, #4ade80, #22c55e);
-        animation: loadBar 1.8s ease-in-out forwards;
-      }
-
-      /* ── Bottom attribution ──────────────────────────────────────── */
-      .splash-attribution {
-        position: absolute;
-        bottom: 20px;
-        font-family: 'Inter', Arial, sans-serif;
-        font-size: 0.62rem;
-        color: rgba(255,255,255,0.3);
-        letter-spacing: 0.04em;
-        animation: fadeSlideUp 0.5s 0.7s ease-out both;
-      }
-
-      /* ── Keyframes ───────────────────────────────────────────────── */
-      @keyframes popIn {
-        0%   { transform: scale(0.4) rotate(-8deg); opacity: 0; }
-        100% { transform: scale(1)   rotate(0deg);  opacity: 1; }
-      }
-      @keyframes fadeSlideUp {
-        0%   { opacity: 0; transform: translateY(14px); }
-        100% { opacity: 1; transform: translateY(0); }
-      }
-      @keyframes pulseGlow {
-        0%,100% { transform: scale(0.95); opacity: 0.5; }
-        50%      { transform: scale(1.05); opacity: 1;   }
-      }
-      @keyframes loadBar {
-        0%   { width: 0%; }
-        30%  { width: 45%; }
-        70%  { width: 75%; }
-        100% { width: 100%; }
-      }
-
-      /* ── React root hidden until splash exits ────────────────────── */
-      #root {
-        opacity: 0;
-        transition: opacity 0.4s ease 0.15s;
-      }
-      #root.visible { opacity: 1; }
-    </style>
-    <script type="module" crossorigin src="/assets/index-IQnH-vlr.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D8wzq632.css">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="/assets/index-VdhXPQMH.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/hi2-CrHhMLB0.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-BCRzGesa.css">
   </head>
   <body>
+    <!-- Keyboard accessibility: skip to main content -->
+    <a href="#main-content" class="skip-link" tabindex="0">
+      Skip to main content
+    </a>
 
-    <!-- ════ JAN AUSHADHI SPLASH SCREEN ════════════════════════════ -->
-    <div id="splash" role="status" aria-label="Loading Jan Aushadhi Smart Medicine">
-
-      <!-- Background decorative rings -->
-      <div class="splash-bg-ring" style="width:320px;height:320px;top:50%;left:50%;transform:translate(-50%,-50%)"></div>
-      <div class="splash-bg-ring" style="width:480px;height:480px;top:50%;left:50%;transform:translate(-50%,-50%)"></div>
-      <div class="splash-bg-ring" style="width:640px;height:640px;top:50%;left:50%;transform:translate(-50%,-50%)"></div>
-
-      <!-- Pill logo mark -->
-      <div class="splash-logo-wrap">
-        <div class="splash-glow"></div>
-        <svg class="splash-pill" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <!-- Outer circle frame -->
-          <circle cx="45" cy="45" r="42" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
-
-          <!-- Green left half of pill -->
-          <path d="M45 15 C28.431 15 15 28.431 15 45 C15 61.569 28.431 75 45 75 Z"
-                fill="#22c55e" opacity="0.95"/>
-
-          <!-- Orange right half of pill -->
-          <path d="M45 15 C61.569 15 75 28.431 75 45 C75 61.569 61.569 75 45 75 Z"
-                fill="#f97316" opacity="0.9"/>
-
-          <!-- White divider line -->
-          <line x1="45" y1="14" x2="45" y2="76" stroke="white" stroke-width="2" opacity="0.85"/>
-
-          <!-- Leaf on green side -->
-          <path d="M35 34 Q29 45 35 56 Q41 49 41 45 Q41 40 35 34 Z"
-                fill="white" opacity="0.6"/>
-
-          <!-- Rx on orange side -->
-          <text x="58" y="50" text-anchor="middle" font-size="11" font-weight="800"
-                font-family="Arial,sans-serif" fill="white" opacity="0.85">Rx</text>
-
-          <!-- Inner capsule glow -->
-          <ellipse cx="45" cy="45" rx="28" ry="28"
-                   stroke="rgba(255,255,255,0.1)" stroke-width="1" fill="none"/>
-        </svg>
+    <div id="root"></div>
+    <noscript>
+      <div style="text-align:center;padding:2rem;font-family:sans-serif">
+        <strong>Smart Medicine System</strong> requires JavaScript to run.
+        Please enable JavaScript in your browser and reload the page.
       </div>
-
-      <!-- Brand name -->
-      <div class="splash-brand">
-        <div class="splash-brand-title">
-          <span class="green">Jan</span><span>Aushadhi</span>
-        </div>
-        <div class="splash-subtitle">Smart Medicine Recommendation System</div>
-      </div>
-
-      <!-- Official PMBJP badge -->
-      <div class="splash-pmbjp-badge" aria-label="Pradhan Mantri Bhartiya Janaushadhi Pariyojana, Government of India">
-        <span class="flag">🇮🇳</span>
-        <span class="badge-text">PMBJP</span>
-        <span class="dot"></span>
-        <span class="badge-text">Govt. of India</span>
-        <span class="dot"></span>
-        <span class="badge-text">Dept. of Pharmaceuticals</span>
-      </div>
-
-      <!-- Official tagline -->
-      <div class="splash-tagline">
-        <span class="hindi">"सस्ती भी, अच्छी भी"</span>
-        &nbsp;—&nbsp;Affordable and Good
-      </div>
-
-      <!-- Loading progress -->
-      <div class="splash-progress-track" aria-hidden="true">
-        <div class="splash-progress-fill"></div>
-      </div>
-
-      <!-- Bottom attribution -->
-      <div class="splash-attribution">Final Year Engineering Project · Smart Medicine System</div>
-    </div>
-
-    <!-- ════ React Root ════════════════════════════════════════════ -->
-    <div id="root"></div>
-
-    <!-- Dismiss splash after React boots -->
-    <script>
-      (function () {
-        var splash = document.getElementById('splash');
-        var root   = document.getElementById('root');
-        var minTime = 2000;  /* 2 s – enough for branding to register */
-        var start = Date.now();
-
-        function dismiss() {
-          var wait = Math.max(0, minTime - (Date.now() - start));
-          setTimeout(function () {
-            splash.classList.add('hidden');
-            root.classList.add('visible');
-            setTimeout(function () { splash.style.display = 'none'; }, 600);
-          }, wait);
-        }
-
-        window.__splashDismiss = dismiss;
-        setTimeout(dismiss, 4500); /* hard fallback */
-      })();
-    </script>
+    </noscript>
   </body>
 </html>
