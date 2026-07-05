@@ -1,10 +1,8 @@
 from fastapi import APIRouter
-
 router = APIRouter(
     prefix="/api/v1/auth",
     tags=["Authentication"]
 )
-
 
 @router.get("/health")
 async def authentication_health():
@@ -16,3 +14,8 @@ async def authentication_health():
         "module": "Authentication",
         "message": "Authentication Router is Working Successfully"
     }
+# @router.get("/me")
+# async def get_me(
+#     current_user: TokenPayload = Depends(get_current_user)
+# ):
+#     return current_user
