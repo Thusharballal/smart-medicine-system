@@ -1,11 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-
 from app.core.config import settings
 from app.database.connection import connect_to_mongodb, close_mongodb_connection
 from app.routers.auth_router import router as auth_router
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_mongodb()
@@ -18,10 +15,7 @@ app = FastAPI(
     version=settings.APP_VERSION,
     lifespan=lifespan
 )
-
 app.include_router(auth_router)
-
-
 @app.get("/")
 async def root():
     return {
