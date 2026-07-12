@@ -34,7 +34,7 @@ def verify_access_token(token: str) -> dict:
             detail="Invalid or expired token."
     )
 oauth2_scheme = OAuth2PasswordBearer(
-tokenUrl="/auth/login"
+tokenUrl="/api/v1/auth/login"
 )
 async def get_current_user(
     token: str = Depends(oauth2_scheme)
@@ -45,15 +45,18 @@ async def get_current_user(
 def require_role(
     allowed_roles: list[str]
 ):
- """Create a dependency that allows accessonly to the specified roles."""
-async def role_checker(
-    current_user: TokenPayload = Depends(get_current_user)
-    ) -> TokenPayload:
-    if current_user.role not in allowed_roles:
-         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to perform this action."
-        )
+    """Create a dependency that allows access only to the specified roles."""
 
-    return current_user
+    async def role_checker(
+        current_user: TokenPayload = Depends(get_current_user)
+    ) -> TokenPayload:
+
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to perform this action."
+            )
+
+        return current_user
+
     return role_checker
