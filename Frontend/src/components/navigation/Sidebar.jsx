@@ -1,37 +1,3 @@
-/**
- * Sidebar Component
- *
- * Purpose : Collapsible side navigation for authenticated dashboards.
- *           Shared by UserLayout, PharmacyLayout, and AdminLayout.
- *           Each layout passes its own navItems config.
- *
- * Location : src/components/navigation/Sidebar.jsx
- *
- * Features :
- *   - Collapsible (icon-only ↔ full label mode)
- *   - Active route highlight via NavLink
- *   - Group headers for section separation
- *   - Nested child items (one level deep)
- *   - Mobile: off-canvas overlay drawer (controlled by parent)
- *   - Logo / brand strip at top
- *   - User profile strip at bottom
- *   - Keyboard accessible, focus-visible rings
- *
- * Props :
- *   navItems   — array of nav group/item config (see NAV_ITEM shape below)
- *   collapsed  — boolean (icon-only mode)
- *   onCollapse — () => void  toggle handler
- *   mobileOpen — boolean (mobile overlay visible)
- *   onMobileClose — () => void
- *   user       — { name, role, avatar? }
- *   onLogout   — () => void
- *
- * NAV_ITEM shape:
- *   { type: 'group', label }          — section divider with label
- *   { type: 'item',  label, to, icon, badge? }
- *   { type: 'item',  label, icon, children: [{ label, to }] }  — expandable
- */
-
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { MdMedication } from 'react-icons/md'
@@ -222,10 +188,16 @@ function Sidebar({
       {user && (
         <div className="shrink-0 border-t border-slate-100 p-3">
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-            <Avatar src={user.avatar} name={user.name} size="sm" />
+            <Avatar
+              src={user.avatar}
+              name={user.full_name || user.name || user.email || 'User'}
+              size="sm"
+            />
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-800 truncate">{user.name}</p>
+              <p className="text-xs font-semibold text-slate-800 truncate">
+                {user.full_name || user.name || user.email || 'User'}
+              </p>
                 <p className="text-[10px] text-slate-400 capitalize truncate">{user.role}</p>
               </div>
             )}

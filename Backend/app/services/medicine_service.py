@@ -56,26 +56,29 @@ async def get_all_medicines():
         medicine["id"] = str(medicine["_id"])
         del medicine["_id"]
         results.append(medicine)
-
     logger.info("Retrieved all medicines successfully.")
-
     return results
 async def get_medicine_by_id(
     medicine_id: str
 ):
     """Retrieve a medicine using its MongoDB ID."""
     db = get_database()
+    # Validate MongoDB ObjectId
+    try:
+        object_id = ObjectId(medicine_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid medicine ID."
+        )
     medicine = await db.medicines.find_one(
-        {
-            "_id": ObjectId(medicine_id)
-        }
+        {"_id": object_id}
     )
     if not medicine:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Medicine not found."
         )
-
     medicine["id"] = str(medicine["_id"])
     del medicine["_id"]
     return medicine
@@ -98,11 +101,6 @@ async def update_medicine(
     update_data = medicine_data.model_dump(
         exclude_unset=True
     )
-    # Prevent modification of master identity fields
-    update_data.pop("generic_name", None)
-    update_data.pop("strength", None)
-    update_data.pop("jan_aushadhi_name", None)
-
     update_data["updated_at"] = datetime.now(
         timezone.utc
     )
@@ -157,24 +155,18 @@ async def archive_medicine(
 async def restore_medicine(
     medicine_id: str
 ):
-    """
-    Restore an archived medicine.
-    """
-
+    """Restore an archived medicine."""
     db = get_database()
-
     medicine = await db.medicines.find_one(
         {
             "_id": ObjectId(medicine_id)
         }
     )
-
     if not medicine:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Medicine not found."
         )
-
     await db.medicines.update_one(
         {
             "_id": ObjectId(medicine_id)
@@ -186,21 +178,16 @@ async def restore_medicine(
             }
         }
     )
-
     logger.info(
         f"Medicine restored successfully: {medicine_id}"
     )
-
     return {
         "message": "Medicine restored successfully."
     }
 async def search_medicines(
     query: str
 ):
-    """
-    Search medicines by generic name, Jan Aushadhi name,
-    brand names, composition or manufacturer.
-    """
+    """ Search medicines by generic name, Jan Aushadhi name,brand names, composition or manufacturer."""
     db = get_database()
     medicines = await db.medicines.find(
         {
@@ -249,3 +236,64 @@ async def search_medicines(
         f"Medicine search completed: {query}"
     )
     return results
+async def delete_medicine(
+    medicine_id: str
+):
+    """Permanently delete a medicine."""
+    db = get_database()
+    try:
+        object_id = ObjectId(medicine_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid medicine ID."
+        )
+    medicine = await db.medicines.find_one(
+        {"_id": object_id}
+    )
+    if not medicine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medicine not found."
+        )
+    await db.medicines.delete_one(
+        {"_id": object_id}
+    )
+    logger.info(
+        f"Medicine deleted successfully: {medicine_id}"
+    )
+    return {
+        "message": "Medicine deleted successfully."
+    }
+async def get_medicine_alternative(medicine_id: str):
+    """Return the generic and Jan Aushadhi equivalent of a medicine."""
+    db = get_database()
+    try:
+        object_id = ObjectId(medicine_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid medicine ID."
+        )
+    medicine = await db.medicines.find_one(
+        {"_id": object_id}
+    )
+    if not medicine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medicine not found."
+        )
+    brand_names = medicine.get("brand_names", [])
+    return {
+        "brand_name": brand_names[0] if brand_names else medicine.get("generic_name", ""),
+        "generic_name": medicine.get("generic_name", ""),
+        "jan_aushadhi_name": medicine.get("jan_aushadhi_name", ""),
+        "composition": medicine.get("composition", ""),
+        "strength": medicine.get("strength", ""),
+        "dosage_form": medicine.get("dosage_form", ""),
+        "manufacturer": medicine.get("manufacturer", ""),
+        "category": medicine.get("category", ""),
+        "branded_price": medicine.get("branded_price", medicine.get("price", 0)),
+        "jan_aushadhi_price": medicine.get("jan_aushadhi_price", 0),
+        "savings": medicine.get("branded_price", medicine.get("price", 0)) - medicine.get("jan_aushadhi_price", 0),    
+    }

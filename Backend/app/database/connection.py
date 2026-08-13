@@ -1,7 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.core.config import settings
 from app.utils.logger import logger
-
+from motor.motor_asyncio import AsyncIOMotorClientSession
 client: AsyncIOMotorClient | None = None
 database: AsyncIOMotorDatabase | None = None
 
@@ -27,3 +27,11 @@ async def close_mongodb_connection() -> None:
 def get_database() -> AsyncIOMotorDatabase:
     """Return the MongoDB database instance."""
     return database
+async def start_db_session() -> AsyncIOMotorClientSession:
+    """
+    Start a MongoDB transaction session.
+    """
+    if client is None:
+        raise RuntimeError("MongoDB is not connected.")
+
+    return await client.start_session()

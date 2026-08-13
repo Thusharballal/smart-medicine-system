@@ -44,9 +44,8 @@ class MedicineModel(BaseModel):
         max_length=100
     )
     description: Optional[str] = None
-    # Indicates whether the medicine is archived.
-    # Archived medicines are hidden from active use
-    # but remain available for historical records.
+    branded_price: float
+    jan_aushadhi_price: float
     is_archived: bool = False
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)

@@ -16,25 +16,15 @@
  *  POST /auth/refresh-token
  *  POST /auth/logout
  */
-
 import axiosClient from '../config/axiosClient'
-
 const authService = {
   register: (data) => axiosClient.post('/auth/register', data),
-
   login: (credentials) => axiosClient.post('/auth/login', credentials),
-
   verifyOtp: (data) => axiosClient.post('/auth/verify-otp', data),
-
   resendOtp: (data) => axiosClient.post('/auth/resend-otp', data),
-
   forgotPassword: (data) => axiosClient.post('/auth/forgot-password', data),
-
   resetPassword: (data) => axiosClient.post('/auth/reset-password', data),
-
   refreshToken: (data) => axiosClient.post('/auth/refresh-token', data),
-
   logout: () => axiosClient.post('/auth/logout'),
 }
-
 export default authService

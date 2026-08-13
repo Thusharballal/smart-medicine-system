@@ -25,24 +25,31 @@ export const ROUTES = {
 
   // ─── Patient / User Routes ───────────────────────────────────────────────
   USER: {
-    DASHBOARD: '/dashboard',
-    SEARCH: '/search',
-    SEARCH_RESULTS: '/search/results',
-    MEDICINE_DETAIL: '/medicine/:id',
+    DASHBOARD:              '/dashboard',
+    SEARCH:                 '/search',
+    SEARCH_RESULTS:         '/search/results',
+    MEDICINE_DETAIL:        '/medicine/:id',
     GENERIC_RECOMMENDATION: '/medicine/:id/generic',
-    NEARBY_PHARMACIES: '/pharmacies/nearby',
-    NOTIFICATIONS: '/notifications',
-    PROFILE: '/profile',
+    NEARBY_PHARMACIES:      '/pharmacies/nearby',
+    NOTIFICATIONS:          '/notifications',
+    PROFILE:                '/profile',
   },
 
   // ─── Pharmacy Routes ─────────────────────────────────────────────────────
   PHARMACY: {
-    DASHBOARD:      '/pharmacy/dashboard',
-    INVENTORY:      '/pharmacy/inventory',
-    INVENTORY_ADD:  '/pharmacy/inventory/add',
-    INVENTORY_EDIT: '/pharmacy/inventory/edit/:id',
-    PRESCRIPTIONS:  '/pharmacy/prescriptions',
-    PROFILE:        '/pharmacy/profile',
+    DASHBOARD:            '/pharmacy/dashboard',
+    INVENTORY_DASHBOARD:  '/pharmacy/inventory-dashboard',
+    INVENTORY:            '/pharmacy/inventory',
+    INVENTORY_ADD:        '/pharmacy/inventory/add',
+    INVENTORY_EDIT:       '/pharmacy/inventory/edit/:id',
+    INVENTORY_ADVANCED:   '/pharmacy/inventory/advanced',
+    IMPORT_STOCK:         '/pharmacy/import-stock',
+    BILLING:              '/pharmacy/billing',
+    BILL_HISTORY:         '/pharmacy/bill-history',
+    REPORTS:              '/pharmacy/reports',
+    SUPPLIERS:            '/pharmacy/suppliers',
+    PRESCRIPTIONS:        '/pharmacy/prescriptions',
+    PROFILE:              '/pharmacy/profile',
   },
 
   // ─── Admin Routes ────────────────────────────────────────────────────────

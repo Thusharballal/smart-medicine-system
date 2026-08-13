@@ -1,16 +1,3 @@
-/**
- * Inventory Service
- *
- * Handles medicine stock management API calls.
- * Used by the pharmacy dashboard inventory module.
- *
- * Endpoints:
- *  GET  /inventory             — pharmacy's stock list
- *  POST /inventory             — add new stock entry
- *  PUT  /inventory/:id         — update stock quantity / details
- *  DELETE /inventory/:id       — remove stock entry
- */
-
 import axiosClient from '../config/axiosClient'
 
 const inventoryService = {

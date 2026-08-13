@@ -32,24 +32,19 @@ import useSessionGuard from './hooks/useSessionGuard'
 // =====================================================
 // Global Providers
 // =====================================================
-
 function App() {
   const { isLoading } = useAuth()
   const { isOnline }  = useOnlineStatus()
-
   // ── Session guard (disabled until backend JWT is ready) ────────────────
   // TODO: Set enabled=true and wire onTimeout to logout after Module 14+
   useSessionGuard({ enabled: false })
-
   // =====================================================
   // Application Router
   // =====================================================
-
   // Offline state — show offline page instead of crashing
   if (!isOnline) {
     return <OfflinePage />
   }
-
   // Auth rehydration loading state (localStorage restore on page refresh)
   if (isLoading) {
     return (
@@ -60,8 +55,6 @@ function App() {
       </div>
     )
   }
-
   return <AppRouter />
 }
-
 export default App

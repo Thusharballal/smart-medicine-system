@@ -19,6 +19,10 @@ import {
   HiOutlineCog6Tooth,
   HiOutlineClipboardDocument,
   HiOutlineDocumentText,
+  HiOutlineDocumentArrowUp,
+  HiOutlineReceiptRefund,
+  HiOutlineClock,
+  HiOutlineTruck,
 } from 'react-icons/hi2'
 import {
   MdDashboard,
@@ -26,6 +30,7 @@ import {
   MdLocalPharmacy,
   MdMedication,
   MdAnalytics,
+  MdBarChart,
 } from 'react-icons/md'
 import { ROUTES } from './routes'
 
@@ -42,12 +47,18 @@ export const USER_NAV = [
 
 // ── Pharmacy staff nav ────────────────────────────────────────────────────────
 export const PHARMACY_NAV = [
-  { type: 'item', label: 'Dashboard',         to: ROUTES.PHARMACY.DASHBOARD,     icon: MdDashboard },
+  { type: 'item',  label: 'Dashboard',           to: ROUTES.PHARMACY.DASHBOARD,           icon: MdDashboard },
   { type: 'group', label: 'Management' },
-  { type: 'item', label: 'Inventory',         to: ROUTES.PHARMACY.INVENTORY,     icon: MdInventory2 },
-  { type: 'item', label: 'Prescriptions',     to: ROUTES.PHARMACY.PRESCRIPTIONS, icon: HiOutlineClipboardDocument },
+  { type: 'item',  label: 'Inventory Dashboard', to: ROUTES.PHARMACY.INVENTORY_DASHBOARD, icon: HiOutlineChartBar },
+  { type: 'item',  label: 'Inventory',           to: ROUTES.PHARMACY.INVENTORY,           icon: MdInventory2 },
+  { type: 'item',  label: 'Import Stock (PDF)',  to: ROUTES.PHARMACY.IMPORT_STOCK,        icon: HiOutlineDocumentArrowUp },
+  { type: 'item',  label: 'Billing',             to: ROUTES.PHARMACY.BILLING,             icon: HiOutlineReceiptRefund },
+  { type: 'item',  label: 'Bill History',        to: ROUTES.PHARMACY.BILL_HISTORY,        icon: HiOutlineClock },
+  { type: 'item',  label: 'Reports & Analytics', to: ROUTES.PHARMACY.REPORTS,     icon: MdBarChart },
+  { type: 'item',  label: 'Supplier Management',to: ROUTES.PHARMACY.SUPPLIERS,   icon: HiOutlineTruck },
+  { type: 'item',  label: 'Prescriptions',       to: ROUTES.PHARMACY.PRESCRIPTIONS, icon: HiOutlineClipboardDocument },
   { type: 'group', label: 'Account' },
-  { type: 'item', label: 'Pharmacy Profile',  to: ROUTES.PHARMACY.PROFILE,       icon: MdLocalPharmacy },
+  { type: 'item',  label: 'Pharmacy Profile',    to: ROUTES.PHARMACY.PROFILE,             icon: MdLocalPharmacy },
 ]
 
 // ── Admin nav ─────────────────────────────────────────────────────────────────

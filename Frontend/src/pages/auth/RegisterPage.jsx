@@ -47,7 +47,13 @@ function RegisterPage() {
   async function onSubmit(data) {
     clearError()
     try {
-      const result = await registerUser(data)
+      const payload = {
+      full_name: data.fullName,
+      email: data.email,
+      phone_number: data.mobile,
+      password: data.password,
+    }
+const result = await registerUser(payload)
       navigate(ROUTES.VERIFY_OTP, {
         replace: true,
         state: { email: result.email, flow: 'register' },

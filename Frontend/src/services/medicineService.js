@@ -1,35 +1,50 @@
 /**
  * Medicine Service
  *
- * Handles all medicine search and recommendation API calls.
- * This is the core service for the Janaushadhi recommendation feature.
- *
- * Endpoints:
- *  GET  /medicines/search          — search by name / composition
- *  GET  /medicines/:id             — medicine detail
- *  GET  /medicines/alternatives/:id — generic / Janaushadhi alternatives
- *  GET  /medicines                 — list all (admin / pharmacy)
- *  POST /medicines                 — create medicine (admin)
- *  PUT  /medicines/:id             — update medicine (admin)
- *  DELETE /medicines/:id           — delete medicine (admin)
+ * Handles medicine master API calls.
  */
 
 import axiosClient from '../config/axiosClient'
 
 const medicineService = {
-  search: (params) => axiosClient.get('/medicines/search', { params }),
+  // Get all medicines
+  getAll: () =>
+    axiosClient.get('/medicines'),
 
-  getById: (id) => axiosClient.get(`/medicines/${id}`),
+  // Get a single medicine
+  getById: (id) =>
+    axiosClient.get(`/medicines/${id}`),
 
-  getAlternatives: (id) => axiosClient.get(`/medicines/alternatives/${id}`),
+  // Search medicines
+  search: (query) =>
+    axiosClient.get('/medicines/search', {
+      params: {
+        q: query,
+      },
+    }),
 
-  getAll: (params) => axiosClient.get('/medicines', { params }),
+  // Get generic / Jan Aushadhi alternative
+  getAlternative: (id) =>
+    axiosClient.get(`/medicines/alternatives/${id}`),
 
-  create: (data) => axiosClient.post('/medicines', data),
+  // Create a new medicine
+  create: (data) =>
+    axiosClient.post('/medicines', data),
 
-  update: (id, data) => axiosClient.put(`/medicines/${id}`, data),
+  // Update medicine
+  update: (id, data) =>
+    axiosClient.put(`/medicines/${id}`, data),
 
-  remove: (id) => axiosClient.delete(`/medicines/${id}`),
+  // Archive medicine
+  archive: (id) =>
+    axiosClient.patch(`/medicines/${id}/archive`),
+
+  // Restore medicine
+  restore: (id) =>
+    axiosClient.patch(`/medicines/${id}/restore`),
+
+  // Permanently delete medicine
+  remove: (id) =>
+    axiosClient.delete(`/medicines/${id}`),
 }
-
 export default medicineService

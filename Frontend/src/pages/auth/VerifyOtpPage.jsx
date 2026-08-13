@@ -14,7 +14,7 @@
  * On success (reset flow)    → /reset-password with token state
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { FiAlertCircle, FiMail } from 'react-icons/fi'
 import { useAuth } from '../../contexts/AuthContext'
@@ -28,10 +28,8 @@ function VerifyOtpPage() {
   const { verifyOtp, resendOtp, isLoading, authError, clearError } = useAuth()
   const navigate  = useNavigate()
   const location  = useLocation()
-
   const email = location.state?.email ?? ''
   const flow  = location.state?.flow  ?? 'register'
-
   const [otp,       setOtp]       = useState('')
   const [otpError,  setOtpError]  = useState('')
   const [cooldown,  setCooldown]  = useState(0)
@@ -59,7 +57,7 @@ function VerifyOtpPage() {
     }
 
     try {
-      await verifyOtp({ email, otp, flow })
+      await verifyOtp({ email, otp,flow})
       if (flow === 'reset') {
         navigate(ROUTES.RESET_PASSWORD, { replace: true, state: { email, otp } })
       } else {

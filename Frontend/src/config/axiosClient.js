@@ -66,7 +66,6 @@ axiosClient.interceptors.response.use(
       storage.remove(STORAGE_KEYS.ACCESS_TOKEN)
       storage.remove(STORAGE_KEYS.REFRESH_TOKEN)
       storage.remove(STORAGE_KEYS.USER)
-
       // Redirect to session-expired page (avoids circular import of React Router)
       // Only redirect if not already on an auth page to prevent redirect loops
       const isAuthPage = ['/login', '/register', ROUTES.SESSION_EXPIRED].some(

@@ -204,12 +204,18 @@ function Navbar({
             </>
           ) : showAuth ? (
             <>
-              <Button variant="ghost" size="sm" as={Link} to={ROUTES.LOGIN}>
+              <Link
+                to={ROUTES.LOGIN}
+                className="inline-flex items-center justify-center gap-2 font-medium rounded-md text-sm px-4 py-2 h-10 text-primary-600 bg-transparent hover:bg-primary-50 active:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-all duration-200 select-none whitespace-nowrap"
+              >
                 Log in
-              </Button>
-              <Button variant="primary" size="sm" as={Link} to={ROUTES.REGISTER}>
+              </Link>
+              <Link
+                to={ROUTES.REGISTER}
+                className="inline-flex items-center justify-center gap-2 font-medium rounded-md text-sm px-4 py-2 h-10 bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-all duration-200 select-none whitespace-nowrap"
+              >
                 Register
-              </Button>
+              </Link>
             </>
           ) : (
             <Link

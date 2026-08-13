@@ -1,44 +1,6 @@
-/**
- * Component: MedicineDetailsPage
- *
- * Description:
- *   Displays detailed information about a selected medicine,
- *   its generic alternatives, price comparison,
- *   nearby pharmacy availability and medicine information.
- *
- * Responsibilities:
- *   - Read medicine ID from URL param (:id)
- *   - Compose all medicine detail sections in specification order
- *   - Two-column layout: main content (left) + action panel (right)
- *   - Breadcrumb navigation back to search
- *
- * Section order (Module 7B Part 2 specification):
- *   1. MedicineOverviewSection     — hero card with all identity fields
- *   2. PriceComparisonSection      — brand vs generic price comparison
- *   3. GenericRecommendationSection — recommended Jan Aushadhi alternative
- *   4. NearbyPharmacyPreview        — nearest stocking pharmacy
- *   5. MedicineInfoTabs             — 7-tab information panel
- *   6. SimilarMedicinesSection      — related medicines grid
- *   7. HealthcareDisclaimer         — medical disclaimer
- *   ActionPanel                     — sticky right column (desktop)
- *
- * Route: /medicine/:id (inside ProtectedRoute → UserLayout)
- *
- * Backend readiness:
- *   - Replace PLACEHOLDER_MEDICINE with TanStack Query:
- *     const { data } = useQuery({
- *       queryKey: ['medicine', id],
- *       queryFn:  () => medicineService.getById(id),
- *     })
- *
- * Dependencies:
- *   - UserLayout (via React Router nesting — automatic)
- *   - All section components (./sections/*)
- *   - Breadcrumb (components/common)
- *   - ROUTES (constants/routes)
- */
-
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import medicineService from '../../services/medicineService'
 import MedicineOverviewSection      from './sections/MedicineOverviewSection'
 import PriceComparisonSection       from './sections/PriceComparisonSection'
 import GenericRecommendationSection from './sections/GenericRecommendationSection'
@@ -47,142 +9,147 @@ import MedicineInfoTabs             from './sections/MedicineInfoTabs'
 import ActionPanel                  from './sections/ActionPanel'
 import SimilarMedicinesSection      from './sections/SimilarMedicinesSection'
 import HealthcareDisclaimer         from './sections/HealthcareDisclaimer'
-import { ROUTES }                   from '../../constants/routes'
 import { HiOutlineArrowLeft }       from 'react-icons/hi2'
-
 // =====================================================
 // Placeholder medicine data
 // TODO: Replace with useQuery(() => medicineService.getById(id))
 // =====================================================
-const PLACEHOLDER_MEDICINE = {
-  id:             'paracetamol-500',
-  name:           'Paracetamol 500mg',
-  genericName:    'Acetaminophen IP',
-  composition:    'Paracetamol IP 500mg',
-  strength:       '500mg',
-  type:           'Tablet',
-  category:       'Analgesic / Antipyretic',
-  manufacturer:   'Jan Aushadhi (BPPI)',
-  prescriptionReqd: false,
-  availability:   'available',
-  isJanAushadhi:  true,
-  isGeneric:      true,
-  isAffordable:   true,
-  nearbyPharmacyCount: 5,
-  price:          18,
-  mrp:            120,
-  description:    'Paracetamol is a widely used analgesic and antipyretic for relief of mild to moderate pain and fever reduction.',
-  lastUpdated:    'July 2025',
-}
-
-const PLACEHOLDER_PRICES = {
-  brandName:    'Crocin 500 (Branded)',
-  brandPrice:   120,
-  genericName:  'Paracetamol IP 500mg (Jan Aushadhi)',
-  genericPrice: 18,
-}
-
-const PLACEHOLDER_GENERIC = {
-  id:               'gen-paracetamol-500',
-  name:             'Paracetamol IP 500mg',
-  equivalentName:   'Acetaminophen (Generic)',
-  composition:      'Paracetamol IP 500mg',
-  price:            18,
-  brandPrice:       120,
-  manufacturer:     'Jan Aushadhi (BPPI)',
-  isCompositionMatch: true,
-  isQualityAssured:   true,
-}
-
 // =====================================================
 // Medicine Details Page
 // =====================================================
 function MedicineDetailsPage() {
-  const { id } = useParams()
-
-  // TODO: fetch real medicine data
-  // const { data: medicine, isLoading, isError } = useQuery({
-  //   queryKey: ['medicine', id],
-  //   queryFn:  () => medicineService.getById(id),
-  // })
-  const medicine = PLACEHOLDER_MEDICINE
-
-  return (
-    <article aria-label={`Medicine details: ${medicine.name}`}>
-
-      {/* =====================================================
-          Breadcrumb navigation
-         ===================================================== */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 mb-4 text-xs text-slate-400">
-        <Link
-          to={ROUTES.USER.SEARCH}
-          className="hover:text-primary-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
-        >
-          Search
-        </Link>
-        <span aria-hidden="true">/</span>
-        <Link
-          to={`${ROUTES.USER.SEARCH_RESULTS}?q=${medicine.name}`}
-          className="hover:text-primary-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
-        >
-          Results
-        </Link>
-        <span aria-hidden="true">/</span>
-        <span className="text-slate-600 font-medium truncate">{medicine.name}</span>
-      </nav>
-
-      {/* =====================================================
-          Two-column layout: main content + action panel
-         ===================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6">
-
-        {/* ── Main content column ──────────────────────────── */}
-        <div className="flex flex-col gap-6 min-w-0">
-
-          {/* =====================================================
-              Medicine Overview
-             ===================================================== */}
-          <MedicineOverviewSection medicine={medicine} />
-
-          {/* =====================================================
-              Price Comparison
-             ===================================================== */}
-          <PriceComparisonSection prices={PLACEHOLDER_PRICES} />
-
-          {/* =====================================================
-              Generic Recommendation
-             ===================================================== */}
-          <GenericRecommendationSection generic={PLACEHOLDER_GENERIC} />
-
-          {/* =====================================================
-              Nearby Pharmacy Preview
-             ===================================================== */}
-          <NearbyPharmacyPreview />
-
-          {/* =====================================================
-              Medicine Information Tabs
-             ===================================================== */}
-          <MedicineInfoTabs />
-
-          {/* =====================================================
-              Similar Medicines
-             ===================================================== */}
-          <SimilarMedicinesSection />
-
-          {/* =====================================================
-              Healthcare Disclaimer
-             ===================================================== */}
-          <HealthcareDisclaimer />
+    const { id } = useParams()
+    const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
+    const searchedBrand = searchParams.get('searched') || ''
+    const [medicine, setMedicine] = useState(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const [isError, setIsError] = useState(false)
+    useEffect(() => {
+        async function fetchMedicine() {
+            try {
+                setIsLoading(true)
+                setIsError(false)
+                 const response = await medicineService.getById(id)
+                setMedicine(response.data)
+            } catch (error) {
+                console.error("Medicine Details Error:", error)
+                setIsError(true)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        fetchMedicine()
+    }, [id])
+    if (isLoading) {
+    return (
+        <div className="p-6 text-center text-slate-500">
+            Loading medicine details...
         </div>
+    )
+}
+if (isError || !medicine) {
+    return (
+        <div className="p-6 text-center text-red-600">
+            Failed to load medicine details.
+        </div>
+    )
+}
+return (
+  <article className="space-y-6 p-4 sm:p-6">
 
-        {/* ── Action panel column (sticky on desktop) ──────── */}
-        <div className="lg:sticky lg:top-16 lg:self-start">
-          <ActionPanel medicine={medicine} />
+    {/* Back to Search */}
+    <div>
+    <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700"
+    >
+        <HiOutlineArrowLeft size={16} />
+        Back to Search
+    </button>
+    </div>
+
+    {/* Medicine Details */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+       <div>
+      <GenericRecommendationSection
+        generic={medicine}
+        brandName={searchedBrand}
+      />
+      <p className="text-xs font-semibold uppercase tracking-wide text-primary-600">
+        Jan Aushadhi Equivalent
+      </p>
+      <h1 className="mt-1 text-2xl font-bold text-slate-900">
+        {medicine.jan_aushadhi_name || medicine.generic_name}
+      </h1>
+      <p className="mt-2 text-sm text-slate-600">
+        <span className="font-semibold">Generic:</span>{' '}
+        {medicine.generic_name || '—'}
+      </p>
+      <p className="mt-1 text-sm text-slate-600">
+        <span className="font-semibold">Brand Names:</span>{' '}
+        {(medicine.brand_names || []).join(', ') || '—'}
+      </p>
+    </div>
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <p className="text-xs text-slate-500">Composition</p>
+          <p className="text-sm font-medium text-slate-900">
+            {medicine.composition || '—'}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-500">Strength</p>
+          <p className="text-sm font-medium text-slate-900">
+            {medicine.strength || '—'}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-500">Dosage Form</p>
+          <p className="text-sm font-medium text-slate-900">
+            {medicine.dosage_form || '—'}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-500">Manufacturer</p>
+          <p className="text-sm font-medium text-slate-900">
+            {medicine.manufacturer || '—'}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-500">Category</p>
+          <p className="text-sm font-medium text-slate-900">
+            {medicine.category || '—'}
+          </p>
+        </div>
+        <div>
+            <p className="text-xs text-slate-500">Jan Aushadhi Price</p>
+            <p className="text-sm font-medium text-slate-900">
+                ₹{medicine.jan_aushadhi_price ?? '—'}
+            </p>
         </div>
       </div>
+      <div className="mt-6">
+        <p className="text-xs text-slate-500">Brand Names</p>
+        <p className="text-sm font-medium text-slate-900">
+          {(medicine.brand_names || []).join(', ') || '—'}
+        </p>
+      </div>
 
-    </article>
-  )
+      <div className="mt-6">
+        <p className="text-xs text-slate-500">Description</p>
+        <p className="mt-1 text-sm text-slate-700">
+          {medicine.description || 'No description available.'}
+        </p>
+      </div>
+        <div className="mt-6">
+        <PriceComparisonSection
+          medicine={medicine}
+        />
+      </div>
+    </div>
+  </article>
+)
 }
-
 export default MedicineDetailsPage

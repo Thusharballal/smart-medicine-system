@@ -1,12 +1,18 @@
 from pydantic import BaseModel, EmailStr, Field
+from app.utils.constants import UserRole
 class RegisterRequest(BaseModel):
     full_name: str = Field(..., min_length=3, max_length=100)
     email: EmailStr
     phone_number: str = Field(..., min_length=10, max_length=15)
     password: str = Field(..., min_length=8, max_length=100)
+    role: UserRole = Field(
+        default=UserRole.USER,
+        description="USER or PHARMACY_OWNER"
+    )
 class VerifyOTPRequest(BaseModel):
     email: EmailStr
     otp: str = Field(..., min_length=6, max_length=6)
+    flow: str
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=100)

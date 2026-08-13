@@ -12,10 +12,9 @@ export const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0'
 
 // User roles — must match the roles returned by the backend
 export const USER_ROLES = {
-  PATIENT: 'patient',
-  PHARMACIST: 'pharmacist',
-  DOCTOR: 'doctor',
-  ADMIN: 'admin',
+  USER: 'USER',
+  PHARMACY_OWNER: 'PHARMACY_OWNER',
+  ADMIN: 'ADMIN',
 }
 
 // Local storage keys

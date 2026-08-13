@@ -1,233 +1,472 @@
 /**
  * Authentication Context
  *
- * Provides authentication state and all auth actions to the component tree.
- * Frontend state management is fully implemented here.
- * Actual API calls are delegated to authService — when the backend is
- * ready, only authService needs to be updated; this context stays intact.
+ * Provides authentication state and authentication actions
+ * to the complete frontend application.
  *
- * State:
- *   currentUser     — the authenticated user object (or null)
- *   isAuthenticated — boolean derived from currentUser
- *   isLoading       — true while an async auth action is in progress
- *   authError       — last auth error message (or null)
+ * Backend:
+ *   FastAPI + JWT Authentication
  *
- * Actions:
- *   login()          — stores user + tokens, sets currentUser
- *   register()       — initiates registration flow, navigates to OTP page
- *   verifyOtp()      — verifies OTP code
- *   resendOtp()      — re-sends OTP
- *   forgotPassword() — sends OTP to email
- *   resetPassword()  — resets password with token
- *   logout()         — clears tokens + user state
- *   clearError()     — resets authError
- *
- * Token storage uses the storage utility (localStorage wrapper).
+ * Responsibilities:
+ *   - Store authenticated user
+ *   - Store JWT access token
+ *   - Login
+ *   - Register
+ *   - Verify OTP
+ *   - Resend OTP
+ *   - Forgot password
+ *   - Reset password
+ *   - Logout
+ *   - Restore session from localStorage
  */
 
-import { createContext, useContext, useState, useCallback } from 'react'
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from 'react'
+
 import { storage } from '../utils/storage'
 import { STORAGE_KEYS } from '../constants/app'
+import authService from '../services/authService'
+import axiosClient from '../config/axiosClient'
+
+// =====================================================
+// Authentication Context
+// =====================================================
 
 const AuthContext = createContext(null)
 
+// =====================================================
+// Auth Provider
+// =====================================================
+
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser]   = useState(() => storage.get(STORAGE_KEYS.USER))
-  const [isLoading,   setIsLoading]     = useState(false)
-  const [authError,   setAuthError]     = useState(null)
+  // ===================================================
+  // Current User
+  // ===================================================
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
-  const clearError = useCallback(() => setAuthError(null), [])
+  const [currentUser, setCurrentUser] = useState(() => {
+    const user = storage.get(STORAGE_KEYS.USER)
 
-  function storeSession(user, accessToken, refreshToken) {
-    storage.set(STORAGE_KEYS.USER,          user)
-    storage.set(STORAGE_KEYS.ACCESS_TOKEN,  accessToken)
-    storage.set(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
-    setCurrentUser(user)
-  }
+    console.log('🔐 AuthContext INITIALIZATION')
+    console.log('User from localStorage:', user)
+    console.log('User role:', user?.role)
 
-  function clearSession() {
+    return user
+  })
+
+  // ===================================================
+  // Loading State
+  // ===================================================
+
+  const [isLoading, setIsLoading] = useState(false)
+
+  // ===================================================
+  // Authentication Error
+  // ===================================================
+
+  const [authError, setAuthError] = useState(null)
+
+  // ===================================================
+  // Track User Changes
+  // ===================================================
+
+  useEffect(() => {
+    console.log('🔄 AuthContext: currentUser changed')
+    console.log('New currentUser:', currentUser)
+    console.log('New role:', currentUser?.role)
+  }, [currentUser])
+
+  // =====================================================
+  // Clear Authentication Error
+  // =====================================================
+
+  const clearError = useCallback(() => {
+    setAuthError(null)
+  }, [])
+
+  // =====================================================
+  // Store Session
+  // =====================================================
+
+  const storeSession = useCallback(
+    (user, accessToken, refreshToken = null) => {
+      console.log('💾 storeSession() called')
+      console.log('User:', user)
+      console.log('User role:', user?.role)
+      console.log(
+        'Access token:',
+        accessToken ? 'present' : 'missing'
+      )
+
+      storage.set(STORAGE_KEYS.USER, user)
+
+      storage.set(
+        STORAGE_KEYS.ACCESS_TOKEN,
+        accessToken
+      )
+
+      storage.set(
+        STORAGE_KEYS.REFRESH_TOKEN,
+        refreshToken
+      )
+
+      setCurrentUser(user)
+
+      console.log('✅ Session stored successfully')
+    },
+    []
+  )
+
+  // =====================================================
+  // Update Current User
+  // =====================================================
+
+  const updateCurrentUser = useCallback((updatedUser) => {
+    console.log(
+      '🔄 Updating current user:',
+      updatedUser
+    )
+
+    storage.set(
+      STORAGE_KEYS.USER,
+      updatedUser
+    )
+
+    setCurrentUser(updatedUser)
+  }, [])
+
+  // =====================================================
+  // Clear Session
+  // =====================================================
+
+  const clearSession = useCallback(() => {
+    console.log('🚪 Clearing authentication session')
+
     storage.remove(STORAGE_KEYS.USER)
-    storage.remove(STORAGE_KEYS.ACCESS_TOKEN)
-    storage.remove(STORAGE_KEYS.REFRESH_TOKEN)
+
+    storage.remove(
+      STORAGE_KEYS.ACCESS_TOKEN
+    )
+
+    storage.remove(
+      STORAGE_KEYS.REFRESH_TOKEN
+    )
+
     setCurrentUser(null)
-  }
+  }, [])
 
-  // ── Actions ───────────────────────────────────────────────────────────────
-  /**
-   * Login — calls authService.login(credentials).
-   * On success stores session and returns the user object.
-   * On failure stores the error message and re-throws so the
-   * page form can display it.
-   */
-  const login = useCallback(async (credentials) => {
-    setIsLoading(true)
-    setAuthError(null)
-    try {
-      // TODO: replace mock with → const { data } = await authService.login(credentials)
-      // Mock response shape for frontend-only development:
-      const data = {
-        user: { id: '1', name: 'Demo User', email: credentials.email, role: 'patient' },
-        accessToken: 'mock_access_token',
-        refreshToken: 'mock_refresh_token',
+  // =====================================================
+  // LOGIN
+  // =====================================================
+
+  const login = useCallback(
+    async (credentials) => {
+      setIsLoading(true)
+      setAuthError(null)
+
+      try {
+        console.log('🔐 Login started')
+        console.log('Login email:', credentials?.email)
+
+        // -----------------------------------------------
+        // Step 1: Call FastAPI login
+        // -----------------------------------------------
+
+        const response =
+          await authService.login(credentials)
+
+        const data = response.data
+
+        console.log(
+          'Login response:',
+          data
+        )
+
+        // -----------------------------------------------
+        // Step 2: Get JWT token
+        // -----------------------------------------------
+
+        const accessToken =
+          data?.access_token
+        if (!accessToken) {
+          throw new Error(
+            'Access token was not returned by the backend.'
+          )
+        }
+        // -----------------------------------------------
+        // Step 3: Store token BEFORE /auth/me
+        // -----------------------------------------------
+        storage.set(
+          STORAGE_KEYS.ACCESS_TOKEN,
+          accessToken
+        )
+        console.log(
+          '✅ Access token stored'
+        )
+        // -----------------------------------------------
+        // Step 4: Get authenticated user
+        // -----------------------------------------------
+        console.log(
+          '👤 Fetching authenticated user...'
+        )
+        const userResponse =
+          await axiosClient.get('/auth/me')
+        const user =
+          userResponse.data
+        console.log(
+          '✅ Authenticated user:',
+          user
+        )
+        // -----------------------------------------------
+        // Step 5: Store complete session
+        // -----------------------------------------------
+        storeSession(
+          user,
+          accessToken,
+          data?.refresh_token ?? null
+        )
+        console.log(
+          '✅ Login completed successfully'
+        )
+        return user
+      } catch (error) {
+        console.error(
+          '❌ Login failed:',
+          error
+        )
+        const message =
+          error?.response?.data?.detail ??
+          error?.response?.data?.message ??
+          error?.message ??
+          'Login failed. Please try again.'
+        setAuthError(message)
+        throw error
+      } finally {
+        setIsLoading(false)
       }
-      storeSession(data.user, data.accessToken, data.refreshToken)
-      return data.user
-    } catch (err) {
-      const msg = err?.response?.data?.message ?? 'Login failed. Please try again.'
-      setAuthError(msg)
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  /**
-   * loginAsDemo — Instantly authenticates a pre-defined demo account.
-   *
-   * ⚠ DEMO / DEVELOPMENT ONLY — Demo authentication is intended only for
-   *   development and project demonstrations. Remove or disable this feature
-   *   after backend authentication is integrated.
-   *   Must be removed or disabled before production deployment.
-   *   Replace with real authService.login() when the FastAPI backend is ready.
-   *
-   * The user object is tagged with isDemo: true so layouts can
-   * display the demo mode banner.
-   *
-   * @param {'patient'|'pharmacist'|'admin'} role
-   * @returns {object} user — the demo user object
-   */
-  const loginAsDemo = useCallback((role) => {
-    const DEMO_ACCOUNTS = {
-      patient: {
-        user:         { id: 'demo-1', name: 'Demo User',           email: 'demo.user@smartmedicine.com',     role: 'patient',    isDemo: true },
-        accessToken:  'demo_access_token_user',
-        refreshToken: 'demo_refresh_token_user',
-      },
-      pharmacist: {
-        user:         { id: 'demo-2', name: 'Demo Pharmacy Owner', email: 'demo.pharmacy@smartmedicine.com', role: 'pharmacist', isDemo: true },
-        accessToken:  'demo_access_token_pharmacy',
-        refreshToken: 'demo_refresh_token_pharmacy',
-      },
-      admin: {
-        user:         { id: 'demo-3', name: 'Demo Administrator',  email: 'admin@smartmedicine.com',         role: 'admin',      isDemo: true },
-        accessToken:  'demo_access_token_admin',
-        refreshToken: 'demo_refresh_token_admin',
-      },
-    }
-    const data = DEMO_ACCOUNTS[role] ?? DEMO_ACCOUNTS.patient
-    storeSession(data.user, data.accessToken, data.refreshToken)
-    return data.user
-  }, [])
-
-  /**
-   * Register — calls authService.register(payload).
-   * Returns the email so the OTP page can display it.
-   */
-  const register = useCallback(async (payload) => {
-    setIsLoading(true)
-    setAuthError(null)
-    try {
-      // TODO: replace mock with → await authService.register(payload)
-      return { email: payload.email }
-    } catch (err) {
-      const msg = err?.response?.data?.message ?? 'Registration failed. Please try again.'
-      setAuthError(msg)
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  /**
-   * Verify OTP — validates the 6-digit code.
-   */
-  const verifyOtp = useCallback(async (payload) => {
-    setIsLoading(true)
-    setAuthError(null)
-    try {
-      // TODO: replace mock with → await authService.verifyOtp(payload)
-      return true
-    } catch (err) {
-      const msg = err?.response?.data?.message ?? 'Invalid or expired OTP.'
-      setAuthError(msg)
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  /**
-   * Resend OTP
-   */
-  const resendOtp = useCallback(async (payload) => {
-    setIsLoading(true)
-    setAuthError(null)
-    try {
-      // TODO: replace mock with → await authService.resendOtp(payload)
-      return true
-    } catch (err) {
-      const msg = err?.response?.data?.message ?? 'Failed to resend OTP.'
-      setAuthError(msg)
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  /**
-   * Forgot Password — sends OTP to the provided email.
-   */
-  const forgotPassword = useCallback(async (payload) => {
-    setIsLoading(true)
-    setAuthError(null)
-    try {
-      // TODO: replace mock with → await authService.forgotPassword(payload)
-      return { email: payload.email }
-    } catch (err) {
-      const msg = err?.response?.data?.message ?? 'Failed to send reset OTP.'
-      setAuthError(msg)
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  /**
-   * Reset Password
-   */
-  const resetPassword = useCallback(async (payload) => {
-    setIsLoading(true)
-    setAuthError(null)
-    try {
-      // TODO: replace mock with → await authService.resetPassword(payload)
-      return true
-    } catch (err) {
-      const msg = err?.response?.data?.message ?? 'Failed to reset password.'
-      setAuthError(msg)
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  /**
-   * Logout — clears session and user state.
-   */
+    },
+    [storeSession]
+  )
+  // =====================================================
+  // REGISTER
+  // =====================================================
+  const register = useCallback(
+    async (payload) => {
+      setIsLoading(true)
+      setAuthError(null)
+      try {
+        console.log(
+          '📝 Registration started'
+        )
+        await authService.register(
+          payload
+        )
+        console.log(
+          '✅ Registration successful'
+        )
+        return {
+          email: payload.email,
+        }
+      } catch (error) {
+        console.error(
+          '❌ Registration failed:',
+          error
+        )
+        const message =
+          error?.response?.data?.detail ??
+          error?.response?.data?.message ??
+          'Registration failed. Please try again.'
+        setAuthError(message)
+        throw error
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    []
+  )
+  // =====================================================
+  // VERIFY OTP
+  // =====================================================
+  const verifyOtp = useCallback(
+    async (payload) => {
+      setIsLoading(true)
+      setAuthError(null)
+      try {
+        console.log(
+          '🔢 OTP verification started'
+        )
+        await authService.verifyOtp({
+          email: payload.email,
+          otp: payload.otp,
+          flow: payload.flow,
+        })
+        console.log(
+          '✅ OTP verified successfully'
+        )
+        return true
+      } catch (error) {
+        console.error(
+          '❌ OTP verification failed:',
+          error
+        )
+        const message =
+          error?.response?.data?.detail ??
+          error?.response?.data?.message ??
+          'Invalid or expired OTP.'
+        setAuthError(message)
+        throw error
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    []
+  )
+  // =====================================================
+  // RESEND OTP
+  // =====================================================
+  const resendOtp = useCallback(
+    async (payload) => {
+      setIsLoading(true)
+      setAuthError(null)
+      try {
+        console.log(
+          '📧 Resending OTP'
+        )
+        await authService.resendOtp({
+          email: payload.email,
+        })
+        console.log(
+          '✅ OTP resent successfully'
+        )
+        return true
+      } catch (error) {
+        console.error(
+          '❌ Resend OTP failed:',
+          error
+        )
+        const message =
+          error?.response?.data?.detail ??
+          error?.response?.data?.message ??
+          'Failed to resend OTP.'
+        setAuthError(message)
+        throw error
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    []
+  )
+  // =====================================================
+  // FORGOT PASSWORD
+  // =====================================================
+  const forgotPassword = useCallback(
+    async (payload) => {
+      setIsLoading(true)
+      setAuthError(null)
+      try {
+        console.log(
+          '🔑 Forgot password request'
+        )
+        await authService.forgotPassword(
+          payload
+        )
+        console.log(
+          '✅ Password reset OTP sent'
+        )
+        return {
+          email: payload.email,
+        }
+      } catch (error) {
+        console.error(
+          '❌ Forgot password failed:',
+          error
+        )
+        const message =
+          error?.response?.data?.detail ??
+          error?.response?.data?.message ??
+          'Failed to send reset OTP.'
+        setAuthError(message)
+        throw error
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    []
+  )
+  // =====================================================
+  // RESET PASSWORD
+  // =====================================================
+  const resetPassword = useCallback(
+    async (payload) => {
+      setIsLoading(true)
+      setAuthError(null)
+      try {
+        console.log(
+          '🔐 Reset password started'
+        )
+        await authService.resetPassword({
+          email: payload.email,
+          otp: payload.otp,
+          new_password:
+            payload.new_password,
+        })
+        console.log(
+          '✅ Password reset successful'
+        )
+        return true
+      } catch (error) {
+        console.error(
+          '❌ Reset password failed:',
+          error
+        )
+        const message =
+          error?.response?.data?.detail ??
+          error?.response?.data?.message ??
+          'Failed to reset password.'
+        setAuthError(message)
+        throw error
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    []
+  )
+  // =====================================================
+  // LOGOUT
+  // =====================================================
   const logout = useCallback(() => {
+    console.log(
+      '🚪 Logging out user'
+    )
     clearSession()
-  }, [])
-
-  // ── Context value ─────────────────────────────────────────────────────────
+    console.log(
+      '✅ Logout completed'
+    )
+  }, [clearSession])
+  // =====================================================
+  // Context Value
+  // =====================================================
   const value = {
+    // User
     currentUser,
-    isAuthenticated: !!currentUser,
-    isDemo: !!currentUser?.isDemo,   // true when active session is a demo session
+    // Authentication status
+    isAuthenticated:
+      !!currentUser,
+    // Demo mode is disabled
+    isDemo: false,
+    // Loading/error state
     isLoading,
     authError,
+
+    // Helpers
     clearError,
+    updateCurrentUser,
+    // Authentication actions
     login,
-    loginAsDemo,
     register,
     verifyOtp,
     resendOtp,
@@ -235,14 +474,30 @@ export function AuthProvider({ children }) {
     resetPassword,
     logout,
   }
+  // =====================================================
+  // Provider
+  // =====================================================
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
-
+// =====================================================
+// useAuth Hook
+// =====================================================
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) throw new Error('useAuth must be used within an <AuthProvider>')
+  const context =
+    useContext(AuthContext)
+  if (!context) {
+    throw new Error(
+      'useAuth must be used within an AuthProvider'
+    )
+  }
   return context
 }
-
+// =====================================================
+// Default Export
+// =====================================================
 export default AuthContext

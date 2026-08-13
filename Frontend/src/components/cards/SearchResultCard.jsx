@@ -1,41 +1,3 @@
-/**
- * Component: SearchResultCard
- *
- * Description:
- *   Rich medicine result card used on the Search Results page.
- *   Extends the basic MedicineCard with additional fields, smart
- *   badges, compare/save/share actions, and a Best Value highlight.
- *
- * Responsibilities:
- *   - Display medicine image placeholder, name, generic name,
- *     composition, manufacturer, strength, type, category
- *   - Render smart availability/value badges
- *   - Support compare checkbox selection (up to 4 medicines)
- *   - Support save (bookmark) toggle with local state
- *   - Support share icon (placeholder)
- *   - Highlight "Best Value" card with premium border + ribbon
- *   - Support grid and list layout modes
- *
- * Props:
- *   medicine     {object}   — medicine data object
- *   isComparing  {boolean}  — whether comparison mode is active
- *   isSelected   {boolean}  — whether this card is selected for compare
- *   onCompare    {Function} — toggle compare selection
- *   onView       {Function} — navigate to medicine detail
- *   isBestValue  {boolean}  — renders the "Best Value" highlight
- *   layout       {'grid'|'list'} — card orientation
- *
- * Dependencies:
- *   - Badge     (components/ui) — reused
- *   - MdMedication, react-icons — healthcare icons
- *
- * Backend readiness:
- *   - onView → navigate to GET /api/v1/medicines/:id
- *   - onSave → POST/DELETE /api/v1/users/me/saved-medicines/:id
- *   - onShare → Web Share API / share dialog (future module)
- *   - onCompare → local UI state only (comparison in Module 7B Part 2)
- */
-
 import { useState } from 'react'
 import {
   HiOutlineBookmark,
@@ -48,7 +10,6 @@ import {
 } from 'react-icons/hi2'
 import { MdMedication } from 'react-icons/md'
 import Badge from '../ui/Badge'
-
 // ── Smart badge configuration ──────────────────────────────────────────────
 const AVAILABILITY_CONFIG = {
   available:   { variant: 'success', label: 'In Stock',      dot: true  },
@@ -72,7 +33,6 @@ function MedicineImagePlaceholder({ type }) {
     </div>
   )
 }
-
 // ── Smart badges row ───────────────────────────────────────────────────────
 function SmartBadges({ medicine }) {
   const {
@@ -80,9 +40,7 @@ function SmartBadges({ medicine }) {
     isGeneric, isJanAushadhi, isAffordable, isNewArrival,
     nearbyPharmacyCount,
   } = medicine
-
   const avail = AVAILABILITY_CONFIG[availability] ?? AVAILABILITY_CONFIG.available
-
   return (
     <div className="flex flex-wrap gap-1.5" role="list" aria-label="Medicine badges">
       <span role="listitem">
@@ -214,12 +172,15 @@ function SearchResultCard({
     strength     = '',
     type         = '',
     category     = '',
-    price,
-    mrp,
+    jan_aushadhi_price,
+    branded_price,
   } = medicine
-
-  const savings = mrp && price ? Math.round(((mrp - price) / mrp) * 100) : null
-
+  const savings =
+    branded_price && jan_aushadhi_price
+      ? Math.round(
+          ((branded_price - jan_aushadhi_price) / branded_price) * 100
+        )
+      : null
   function handleShare() {
     if (onShare) {
       onShare(medicine)
@@ -298,18 +259,27 @@ function SearchResultCard({
         <SmartBadges medicine={medicine} />
 
         {/* ── Name block ────────────────────────────────────────── */}
-        <div className="min-w-0">
-          <h3 className="text-sm font-bold text-slate-900 leading-snug truncate">
-            {name}
-          </h3>
-          {genericName && (
-            <p className="text-xs text-slate-500 truncate">{genericName}</p>
-          )}
-          {composition && (
-            <p className="text-[11px] text-slate-400 truncate mt-0.5">{composition}</p>
-          )}
-        </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-primary-600">
+          Jan Aushadhi Equivalent
+        </p>
 
+        <h3 className="text-sm font-bold text-slate-900 leading-snug truncate mt-0.5">
+          {name}
+        </h3>
+
+        {genericName && (
+          <p className="text-xs text-slate-600 mt-1">
+            <span className="font-medium">Generic:</span> {genericName}
+          </p>
+        )}
+
+        {composition && (
+          <p className="text-[11px] text-slate-400 truncate mt-0.5">
+            Composition: {composition}
+          </p>
+        )}
+      </div>
         {/* ── Meta row ──────────────────────────────────────────── */}
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
           {manufacturer && (
@@ -326,24 +296,35 @@ function SearchResultCard({
 
         {/* ── Price row ─────────────────────────────────────────── */}
         <div className="flex items-baseline gap-2">
-          {price !== undefined ? (
+          {jan_aushadhi_price != null ? (
             <>
-              <span className="text-base font-extrabold text-slate-900">₹{price}</span>
-              {mrp && mrp !== price && (
-                <span className="text-xs text-slate-400 line-through">₹{mrp}</span>
-              )}
+              <span className="text-base font-extrabold text-slate-900">
+                ₹{jan_aushadhi_price}
+              </span>
+
+              {branded_price != null &&
+                branded_price !== jan_aushadhi_price && (
+                  <span className="text-xs text-slate-400 line-through">
+                    ₹{branded_price}
+                  </span>
+                )}
+
               {savings > 0 && (
-                <Badge variant="success" size="sm">{savings}% off</Badge>
+                <Badge variant="success" size="sm">
+                  {savings}% off
+                </Badge>
               )}
-              {isBestValue && mrp && price && (
-                <span className="text-xs font-semibold text-success-600">
-                  Save ₹{mrp - price}
-                </span>
-              )}
+
+              {isBestValue &&
+                branded_price != null &&
+                jan_aushadhi_price != null && (
+                  <span className="text-xs font-semibold text-success-600">
+                    Save ₹{branded_price - jan_aushadhi_price}
+                  </span>
+                )}
             </>
           ) : (
             <span className="text-sm text-slate-400 italic">
-              {/* TODO: price from GET /api/v1/medicines/:id */}
               Price not available
             </span>
           )}

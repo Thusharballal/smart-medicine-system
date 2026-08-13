@@ -1,202 +1,405 @@
-/**
- * Component: MedicineFormPage
- *
- * Description:
- *   Shared professional form for adding or editing a medicine
- *   in the pharmacy inventory. Mode is determined by the URL.
- *
- * Responsibilities:
- *   • Add Medicine — blank form with Save + Cancel
- *   • Edit Medicine — pre-filled form with Update + Cancel
- *   • Validation using React Hook Form + Zod
- *   • Image placeholder upload slot
- *   • Barcode placeholder field
- *   • Supplier placeholder field
- *
- * Backend readiness:
- *   Add  → POST /api/v1/pharmacy/inventory
- *   Edit → PUT  /api/v1/pharmacy/inventory/:id
- */
-
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { HiOutlineArrowLeft, HiOutlineCamera, HiOutlineQrCode } from 'react-icons/hi2'
-import { MdMedication } from 'react-icons/md'
-import Input    from '../../components/forms/Input'
-import Select   from '../../components/forms/Select'
-import Textarea from '../../components/forms/Textarea'
-import Button   from '../../components/ui/Button'
+import { useEffect, useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { HiOutlineArrowLeft } from 'react-icons/hi2'
+import medicineService from '../../services/medicineService'
+import batchService from '../../services/batchService'
+import Input from '../../components/forms/Input'
+import Select from '../../components/forms/Select'
+import Button from '../../components/ui/Button'
 import { ROUTES } from '../../constants/routes'
-import { CATEGORIES, DOSAGE_FORMS, INVENTORY } from './data/inventoryData'
-
-// ── Zod validation schema ──────────────────────────────────────────────────
-const medicineSchema = z.object({
-  name:        z.string().min(2, 'Medicine name is required'),
-  genericName: z.string().min(2, 'Generic name is required'),
-  composition: z.string().min(3, 'Composition is required'),
-  manufacturer:z.string().min(2, 'Manufacturer is required'),
-  category:    z.string().min(1, 'Category is required'),
-  strength:    z.string().min(1, 'Strength is required'),
-  dosageForm:  z.string().min(1, 'Dosage form is required'),
-  batch:       z.string().min(2, 'Batch number is required'),
-  mfgDate:     z.string().min(1, 'Manufacturing date is required'),
-  expiry:      z.string().min(1, 'Expiry date is required'),
-  qty:         z.coerce.number().min(0, 'Quantity cannot be negative'),
-  price:       z.coerce.number().min(0.01, 'Price must be positive'),
-  supplier:    z.string().optional(),
-  barcode:     z.string().optional(),
-  notes:       z.string().optional(),
-})
-
 function MedicineFormPage() {
-  const { id }     = useParams()
-  const navigate   = useNavigate()
-  const isEdit     = !!id
-
-  // Pre-fill for edit mode — TODO: fetch from GET /api/v1/pharmacy/inventory/:id
-  const prefill = isEdit ? INVENTORY.find(i => i.id === id) : undefined
-
-  const {
-    register, handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(medicineSchema),
-    defaultValues: prefill ? {
-      name: prefill.name, genericName: prefill.genericName,
-      composition: prefill.composition, manufacturer: prefill.manufacturer,
-      category: prefill.category, strength: prefill.strength,
-      dosageForm: prefill.dosageForm, batch: prefill.batch,
-      mfgDate: prefill.mfgDate, expiry: prefill.expiry,
-      qty: prefill.qty, price: prefill.price,
-    } : {},
+  const navigate = useNavigate()
+  const [medicines, setMedicines] = useState([])
+  const [isLoadingMedicines, setIsLoadingMedicines] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedMedicineId, setSelectedMedicineId] = useState('')
+  const [form, setForm] = useState({
+    batch_number: '',
+    manufacturing_date: '',
+    expiry_date: '',
+    quantity_received: '',
+    purchase_price: '',
+    mrp: '',
+    supplier_name: '',
+    invoice_number: '',
   })
 
-  function onSubmit(_data) {
-    // TODO: POST /api/v1/pharmacy/inventory (add) or PUT /api/v1/pharmacy/inventory/:id (edit)
-    navigate(ROUTES.PHARMACY.INVENTORY)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  // =====================================================
+  // Load existing medicine master data
+  // =====================================================
+  useEffect(() => {
+    async function fetchMedicines() {
+      try {
+        setIsLoadingMedicines(true)
+        setError('')
+
+        const response = await medicineService.getAll()
+
+        setMedicines(response.data || [])
+      } catch (err) {
+        console.error('Failed to load medicines:', err)
+
+        setError(
+          err.response?.data?.detail ||
+          'Failed to load medicines.'
+        )
+      } finally {
+        setIsLoadingMedicines(false)
+      }
+    }
+
+    fetchMedicines()
+  }, [])
+
+  // =====================================================
+  // Handle form changes
+  // =====================================================
+  function handleChange(event) {
+    const { name, value } = event.target
+
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }))
   }
 
-  return (
-    <article aria-label={isEdit ? 'Edit Medicine' : 'Add Medicine'} className="max-w-3xl mx-auto">
+  // =====================================================
+  // Submit
+  // =====================================================
+  async function handleSubmit(event) {
+    event.preventDefault()
 
+    setError('')
+    setSuccess('')
+
+    if (!selectedMedicineId) {
+      setError('Please select a medicine.')
+      return
+    }
+
+    if (!form.batch_number.trim()) {
+      setError('Batch number is required.')
+      return
+    }
+
+    if (!form.manufacturing_date) {
+      setError('Manufacturing date is required.')
+      return
+    }
+    if (!form.expiry_date) {
+      setError('Expiry date is required.')
+      return
+    }
+    if (new Date(form.expiry_date) <= new Date(form.manufacturing_date)) {
+      setError('Expiry date must be after manufacturing date.')
+      return
+    }
+    if (!form.quantity_received || Number(form.quantity_received) <= 0) {
+      setError('Quantity must be greater than 0.')
+      return
+    }
+    if (!form.purchase_price || Number(form.purchase_price) <= 0) {
+      setError('Purchase price must be greater than 0.')
+      return
+    }
+    if (!form.mrp || Number(form.mrp) <= 0) {
+      setError('MRP must be greater than 0.')
+      return
+    }
+    if (!form.supplier_name.trim()) {
+      setError('Supplier name is required.')
+      return
+    }
+    if (!form.invoice_number.trim()) {
+      setError('Invoice number is required.')
+      return
+    }
+    try {
+      setIsSubmitting(true)
+      const payload = {
+        medicine_id: selectedMedicineId,
+        batch_number: form.batch_number.trim(),
+        manufacturing_date: `${form.manufacturing_date}T00:00:00Z`,
+        expiry_date: `${form.expiry_date}T00:00:00Z`,
+        quantity_received: Number(form.quantity_received),
+        purchase_price: Number(form.purchase_price),
+        mrp: Number(form.mrp),
+        supplier_name: form.supplier_name.trim(),
+        invoice_number: form.invoice_number.trim(),
+      }
+      console.log('Creating batch:', payload)
+      await batchService.create(payload)
+      setSuccess('Medicine batch added successfully.')
+      setTimeout(() => {
+        navigate(ROUTES.PHARMACY.INVENTORY)
+      }, 800)
+    } catch (err) {
+      console.error('Failed to add medicine batch:', err)
+
+      setError(
+        err.response?.data?.detail ||
+        'Failed to add medicine batch.'
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+    const selectedMedicine = medicines.find(
+      (medicine) => (medicine.id || medicine._id) === selectedMedicineId
+    )
+  return (
+    <article
+      aria-label="Add Medicine"
+      className="max-w-3xl mx-auto"
+    >
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <Link
           to={ROUTES.PHARMACY.INVENTORY}
           aria-label="Back to inventory"
-          className="flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          className="flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
         >
-          <HiOutlineArrowLeft size={16} aria-hidden="true" />
+          <HiOutlineArrowLeft size={16} />
         </Link>
+
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">
-            {isEdit ? 'Edit Medicine' : 'Add Medicine'}
+            Add Medicine
           </h1>
+
           <p className="text-xs text-slate-500">
-            {isEdit ? `Editing: ${prefill?.name ?? id}` : 'Add a new medicine to your inventory'}
+            Add a medicine batch to your pharmacy inventory
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-
-        {/* Image placeholder */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <p className="text-sm font-semibold text-slate-800 mb-3">Medicine Image</p>
-          <div
-            aria-label="Medicine image upload placeholder"
-            className="flex flex-col items-center justify-center h-32 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
-          >
-            {/* TODO: file upload input for medicine image */}
-            <MdMedication size={32} className="text-slate-300 mb-2" aria-hidden="true" />
-            <p className="text-xs text-slate-400">Click to upload medicine image</p>
-            <p className="text-[10px] text-slate-300 mt-0.5">PNG, JPG up to 2MB (placeholder)</p>
-          </div>
+      {/* Error */}
+      {error && (
+        <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
         </div>
+      )}
 
-        {/* Basic Information */}
+      {/* Success */}
+      {success && (
+        <div className="mb-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          {success}
+        </div>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="space-y-5"
+      >
+        {/* =====================================================
+            Medicine Selection
+        ====================================================== */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
-          <p className="text-sm font-semibold text-slate-800 border-b border-slate-100 pb-2">Basic Information</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Medicine Name"  required error={errors.name?.message}         {...register('name')}         placeholder="Enter medicine name (e.g. Paracetamol IP 500mg)" />
-            <Input label="Generic Name"   required error={errors.genericName?.message}  {...register('genericName')}  placeholder="Enter generic name (e.g. Acetaminophen)" />
-          </div>
-          <Input label="Composition" required error={errors.composition?.message} {...register('composition')} placeholder="Enter active composition (e.g. Paracetamol IP 500mg)" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Manufacturer" required error={errors.manufacturer?.message} {...register('manufacturer')} placeholder="Enter manufacturer name (e.g. Jan Aushadhi / BPPI)" />
-            <Select
-              label="Category" required
-              options={CATEGORIES.map(c => ({ value: c, label: c }))}
-              placeholder="Select medicine category"
-              error={errors.category?.message}
-              {...register('category')}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Strength" required error={errors.strength?.message} {...register('strength')} placeholder="Enter strength (e.g. 500mg, 10ml)" />
-            <Select
-              label="Dosage Form" required
-              options={DOSAGE_FORMS.map(f => ({ value: f, label: f }))}
-              placeholder="Select dosage form"
-              error={errors.dosageForm?.message}
-              {...register('dosageForm')}
-            />
-          </div>
-        </div>
-
-        {/* Batch & Dates */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
-          <p className="text-sm font-semibold text-slate-800 border-b border-slate-100 pb-2">Batch & Dates</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input label="Batch Number"       required type="text" error={errors.batch?.message}   {...register('batch')}   placeholder="Enter batch number (e.g. BAT-2025-001)" />
-            <Input label="Manufacturing Date" required type="date" error={errors.mfgDate?.message}  {...register('mfgDate')} />
-            <Input label="Expiry Date"        required type="date" error={errors.expiry?.message}   {...register('expiry')} />
-          </div>
-        </div>
-
-        {/* Stock & Pricing */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
-          <p className="text-sm font-semibold text-slate-800 border-b border-slate-100 pb-2">Stock & Pricing</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Quantity" required type="number" error={errors.qty?.message}   {...register('qty')}   placeholder="Enter quantity in stock" />
-            <Input label="Price (₹)" required type="number" error={errors.price?.message} {...register('price')} placeholder="Enter selling price (e.g. 25.00)" />
-          </div>
-          <Input label="Supplier" error={errors.supplier?.message} {...register('supplier')} placeholder="Enter supplier name (optional)" helperText="TODO: link to Supplier Management module" />
-        </div>
-
-        {/* Barcode placeholder */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <p className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-            <HiOutlineQrCode size={16} className="text-slate-400" aria-hidden="true" />
-            Barcode
+          <p className="text-sm font-semibold text-slate-800 border-b border-slate-100 pb-2">
+            Select Medicine
           </p>
-          <Input
-            label="Barcode / QR Code"
-            error={errors.barcode?.message}
-            {...register('barcode')}
-            placeholder="Scan or enter barcode number (optional)"
-            helperText="TODO: integrate Barcode Scanner API"
-            rightIcon={<HiOutlineCamera size={16} />}
+
+          <Select
+            label="Medicine"
+            required
+            value={selectedMedicineId}
+            onChange={(event) => setSelectedMedicineId(event.target.value)}
+            disabled={isLoadingMedicines}
+            options={medicines.map((medicine) => ({
+              value: medicine.id || medicine._id,
+              label: `${medicine.generic_name || 'Medicine'}${
+                medicine.strength
+                  ? ` - ${medicine.strength}`
+                  : ''
+              }${
+                medicine.jan_aushadhi_name
+                  ? ` (${medicine.jan_aushadhi_name})`
+                  : ''
+              }`,
+            }))}
+            placeholder={
+              isLoadingMedicines
+                ? 'Loading medicines...'
+                : 'Select an existing medicine'
+            }
           />
+
+          {selectedMedicine && (
+            <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-slate-500">
+                    Generic Name
+                  </p>
+                  <p className="text-sm font-semibold text-slate-800">
+                    {selectedMedicine.generic_name || '—'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500">
+                    Jan Aushadhi Name
+                  </p>
+                  <p className="text-sm font-semibold text-slate-800">
+                    {selectedMedicine.jan_aushadhi_name || '—'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500">
+                    Composition
+                  </p>
+                  <p className="text-sm font-semibold text-slate-800">
+                    {selectedMedicine.composition || '—'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500">
+                    Manufacturer
+                  </p>
+                  <p className="text-sm font-semibold text-slate-800">
+                    {selectedMedicine.manufacturer || '—'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Notes */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <Textarea label="Notes" {...register('notes')} placeholder="Enter any additional notes about this medicine (optional)…" rows={3} />
+        {/* =====================================================
+            Batch Information
+        ====================================================== */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+          <p className="text-sm font-semibold text-slate-800 border-b border-slate-100 pb-2">
+            Batch & Dates
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input
+              label="Batch Number"
+              required
+              name="batch_number"
+              value={form.batch_number}
+              onChange={handleChange}
+              placeholder="e.g. PCM500-A001"
+            />
+
+            <Input
+              label="Manufacturing Date"
+              required
+              type="date"
+              name="manufacturing_date"
+              value={form.manufacturing_date}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Expiry Date"
+              required
+              type="date"
+              name="expiry_date"
+              value={form.expiry_date}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+
+        {/* =====================================================
+            Stock & Pricing
+        ====================================================== */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+          <p className="text-sm font-semibold text-slate-800 border-b border-slate-100 pb-2">
+            Stock & Pricing
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input
+              label="Quantity Received"
+              required
+              type="number"
+              min="1"
+              name="quantity_received"
+              value={form.quantity_received}
+              onChange={handleChange}
+              placeholder="100"
+            />
+
+            <Input
+              label="Purchase Price (₹)"
+              required
+              type="number"
+              min="0.01"
+              step="0.01"
+              name="purchase_price"
+              value={form.purchase_price}
+              onChange={handleChange}
+              placeholder="12.50"
+            />
+
+            <Input
+              label="MRP (₹)"
+              required
+              type="number"
+              min="0.01"
+              step="0.01"
+              name="mrp"
+              value={form.mrp}
+              onChange={handleChange}
+              placeholder="18.00"
+            />
+          </div>
+        </div>
+
+        {/* =====================================================
+            Supplier Information
+        ====================================================== */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+          <p className="text-sm font-semibold text-slate-800 border-b border-slate-100 pb-2">
+            Supplier Information
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Supplier Name"
+              required
+              name="supplier_name"
+              value={form.supplier_name}
+              onChange={handleChange}
+              placeholder="ABC Pharma Distributors"
+            />
+
+            <Input
+              label="Invoice Number"
+              required
+              name="invoice_number"
+              value={form.invoice_number}
+              onChange={handleChange}
+              placeholder="INV-2026-001"
+            />
+          </div>
         </div>
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 pb-4">
           <Link
             to={ROUTES.PHARMACY.INVENTORY}
-            className="px-5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            className="px-5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
           >
             Cancel
           </Link>
-          <Button type="submit" variant="secondary" loading={isSubmitting}>
-            {isEdit ? 'Update Medicine' : 'Save Medicine'}
+
+          <Button
+            type="submit"
+            variant="secondary"
+            loading={isSubmitting}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Saving...' : 'Save Medicine'}
           </Button>
         </div>
       </form>

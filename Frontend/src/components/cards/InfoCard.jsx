@@ -56,10 +56,10 @@ function InfoCard({
   return (
     <article
       className={[
-        'rounded-xl border border-slate-200 p-5 flex flex-col gap-4',
-        v.bg,
-        isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : '',
-        'shadow-sm',
+      'rounded-2xl border border-slate-200/80 p-6 flex flex-col gap-5 backdrop-blur-sm',        v.bg,
+      isClickable
+        ? 'cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl'
+        : '', 'shadow-sm hover:shadow-lg',
         className,
       ]
         .filter(Boolean)
@@ -75,7 +75,7 @@ function InfoCard({
           {label}
         </p>
         {icon && (
-          <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${v.iconBg}`}>
+          <div className={`flex items-center justify-center w-11 h-11 rounded-xl ${v.iconBg}`}>
             <span className={`${v.iconColor}`} aria-hidden="true">{icon}</span>
           </div>
         )}
@@ -83,7 +83,7 @@ function InfoCard({
 
       {/* Value */}
       <div>
-        <p className="text-2xl font-bold text-slate-900 leading-none">{value}</p>
+        <p className="text-3xl font-bold text-slate-900 leading-none">{value}</p>
         {subtitle && (
           <p className="text-xs text-slate-500 mt-1">{subtitle}</p>
         )}
@@ -93,7 +93,7 @@ function InfoCard({
       {trend && (() => {
         const t = TREND_STYLES[trend.direction] ?? TREND_STYLES.neutral
         return (
-          <div className={`flex items-center gap-1 text-xs font-medium ${t.color}`}>
+          <div className={`flex items-center gap-2 text-xs font-medium ${t.color}`}>
             {t.Icon && <t.Icon size={14} aria-hidden="true" />}
             <span>{trend.value}</span>
             {trend.label && <span className="text-slate-400 font-normal">{trend.label}</span>}
@@ -103,5 +103,4 @@ function InfoCard({
     </article>
   )
 }
-
 export default InfoCard

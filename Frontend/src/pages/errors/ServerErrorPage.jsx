@@ -5,7 +5,6 @@
  * Displayed when the application encounters an unexpected runtime error.
  */
 
-import { Link } from 'react-router-dom'
 import { HiOutlineArrowPath, HiOutlineHome } from 'react-icons/hi2'
 import { ROUTES } from '../../constants/routes'
 
@@ -39,13 +38,16 @@ function ServerErrorPage({ onRetry }) {
             Try Again
           </button>
         )}
-        <Link
-          to={ROUTES.HOME}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-        >
-          <HiOutlineHome size={15} aria-hidden="true" />
-          Go Home
-        </Link>
+              <button
+        type="button"
+        onClick={() => {
+          window.location.href = ROUTES.HOME
+        }}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+      >
+        <HiOutlineHome size={15} aria-hidden="true" />
+        Go Home
+      </button>
       </div>
     </div>
   )

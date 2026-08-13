@@ -22,6 +22,7 @@ import Input   from '../../components/forms/Input'
 import Toggle  from '../../components/forms/Toggle'
 import Button  from '../../components/ui/Button'
 import { useAuth } from '../../contexts/AuthContext'
+import userService from '../../services/userService'
 import { useState } from 'react'
 
 const profileSchema = z.object({
@@ -31,25 +32,46 @@ const profileSchema = z.object({
 })
 
 function ProfilePage() {
-  const { currentUser } = useAuth()
+const {
+  currentUser,
+  updateCurrentUser
+} = useAuth()
   const [notifEnabled, setNotifEnabled] = useState(true)
   const [saved,        setSaved]        = useState(false)
 
-  const name  = currentUser?.name  ?? 'Demo User'
+  const name  = currentUser?.full_name  ?? 'Demo User'
   const email = currentUser?.email ?? 'demo@example.com'
-  const role  = currentUser?.role  ?? 'patient'
-
+  const role = currentUser?.role ?? 'USER'
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name, email, phone: '' },
+    defaultValues: {
+    name,
+    email,
+    phone: currentUser?.phone_number ?? '',
+},
   })
-
-  function onSubmit(_data) {
-    // TODO: PUT /api/v1/users/me
+async function onSubmit(data) {
+  try {
+    const response = await userService.updateMe({
+      full_name: data.name,
+      phone_number: data.phone,
+    })
+    console.log("Updated User:", response.data)
+    // Update AuthContext
+    updateCurrentUser(response.data)
+    // Show success message
     setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    setTimeout(() => {
+      setSaved(false)
+    }, 2500)
+  } catch (error) {
+    console.error("Profile Update Error:", error)
+    alert(
+      error.response?.data?.detail ??
+      "Failed to update profile."
+    )
   }
-
+}
   return (
     <article aria-label="Profile" className="max-w-2xl mx-auto flex flex-col gap-5">
 
@@ -79,19 +101,29 @@ function ProfilePage() {
             <Input label="Full Name"       required error={errors.name?.message}  {...register('name')}  placeholder="Enter your full name" />
             <Input label="Email Address"   required type="email" error={errors.email?.message} {...register('email')} placeholder="Enter your email address" />
           </div>
-          <Input label="Mobile Number" type="tel" error={errors.phone?.message} {...register('phone')} placeholder="Enter your 10-digit mobile number" helperText="TODO: verify via OTP after update" />
-          <div className="flex items-center gap-3 pt-1">
-            <Button type="submit" variant="primary" loading={isSubmitting}>
-              {saved ? 'Saved!' : 'Save Changes'}
-            </Button>
-            <p className="text-[11px] text-slate-400">
-              {/* TODO: PUT /api/v1/users/me */}
-              Changes saved locally — backend integration in Module 14+
-            </p>
-          </div>
-        </form>
-      </div>
-
+            <Input
+              label="Mobile Number"
+              type="tel"
+              error={errors.phone?.message}
+              {...register('phone')}
+              placeholder="Enter your 10-digit mobile number"
+            />
+            <div className="flex items-center gap-3 pt-1">
+              <Button
+                type="submit"
+                variant="primary"
+                loading={isSubmitting}
+              >
+                {saved ? "Saved!" : "Save Changes"}
+              </Button>
+              {saved && (
+                <p className="text-sm text-green-600 font-medium">
+                  ✓ Profile updated successfully.
+                </p>
+              )}
+            </div>
+            </form>
+            </div>
       {/* Account settings */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
         <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
@@ -126,10 +158,6 @@ function ProfilePage() {
           <button type="button" className="w-full text-left text-xs font-medium text-primary-600 hover:text-primary-700 py-2 px-3 rounded-lg hover:bg-primary-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
             Change Password →
           </button>
-          <p className="text-[10px] text-slate-400 px-3">
-            {/* TODO: POST /api/v1/auth/change-password */}
-            Password change requires backend integration.
-          </p>
         </div>
       </div>
     </article>

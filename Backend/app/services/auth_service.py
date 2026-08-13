@@ -142,9 +142,7 @@ async def verify_otp(
     otp_data: VerifyOTPRequest
 ):
     """Verify the user's email OTP."""
-
     db = get_database()
-
     print("Email received:", repr(otp_data.email))
     print("OTP received:", repr(otp_data.otp))
 
@@ -178,30 +176,36 @@ async def verify_otp(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP has expired."
         )
-# Mark OTP as used
-    await db.otp_verifications.update_one(
-    {"_id": otp_record["_id"]},
-    {
-        "$set": {
-            "used": True
-        }
-    }
-)
-# Mark user email as verified
-    await db.users.update_one(
-    {"email": otp_data.email},
-    {
-        "$set": {
-            "is_email_verified": True
-        }
-    }
-)
-    logger.info(
-        f"Email verified successfully: {otp_data.email}"
-)
+    # Registration Flow
+    if otp_data.flow == "register":
+
+        await db.otp_verifications.update_one(
+            {"_id": otp_record["_id"]},
+            {
+                "$set": {
+                    "used": True
+                }
+            }
+        )
+        await db.users.update_one(
+            {"email": otp_data.email},
+            {
+                "$set": {
+                    "is_email_verified": True
+                }
+            }
+        )
+    # Forgot Password Flow
+    elif otp_data.flow == "reset":
+        # Only verify OTP
+        # Do NOT mark it as used
+        pass
+        logger.info(
+            f"Email verified successfully: {otp_data.email}"
+    )
     return {
-    "message": "Email verified successfully."
-}
+        "message": "Email verified successfully."
+    }
 async def forgot_password(
     request: ForgotPasswordRequest
 ):

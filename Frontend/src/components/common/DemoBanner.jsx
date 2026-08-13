@@ -15,12 +15,9 @@
 
 import { useState } from 'react'
 import { HiOutlineXMark, HiOutlineBeaker } from 'react-icons/hi2'
-
 function DemoBanner() {
   const [dismissed, setDismissed] = useState(false)
-
   if (dismissed) return null
-
   return (
     <div
       role="status"
@@ -52,5 +49,4 @@ function DemoBanner() {
     </div>
   )
 }
-
 export default DemoBanner

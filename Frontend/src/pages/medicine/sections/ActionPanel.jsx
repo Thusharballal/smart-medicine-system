@@ -32,9 +32,7 @@ import Button from '../../../components/ui/Button'
 function ActionPanel({ medicine = {} }) {
   const [isSaved,   setIsSaved]   = useState(false)
   const [isShared,  setIsShared]  = useState(false)
-
-  const { name = 'Medicine', price } = medicine
-
+const { generic_name = 'Medicine', price } = medicine
   function handleSave() {
     setIsSaved((s) => !s)
     // TODO: POST/DELETE /api/v1/users/me/saved-medicines/:id
@@ -75,7 +73,7 @@ function ActionPanel({ medicine = {} }) {
         fullWidth
         leftIcon={<HiOutlineArrowsRightLeft size={16} />}
         onClick={handleCompare}
-        aria-label={`Compare ${name} with other medicines`}
+        aria-label={`Compare ${generic_name} with other medicines`}
       >
         Compare Medicine
       </Button>
@@ -85,7 +83,7 @@ function ActionPanel({ medicine = {} }) {
         fullWidth
         leftIcon={isSaved ? <HiBookmark size={16} /> : <HiOutlineBookmark size={16} />}
         onClick={handleSave}
-        aria-label={isSaved ? `Remove ${name} from saved` : `Save ${name}`}
+        aria-label={isSaved ? `Remove ${generic_name} from saved` : `Save ${generic_name}`}
         aria-pressed={isSaved}
       >
         {isSaved ? 'Saved' : 'Save Medicine'}
@@ -96,7 +94,7 @@ function ActionPanel({ medicine = {} }) {
         fullWidth
         leftIcon={<HiOutlineShare size={16} />}
         onClick={handleShare}
-        aria-label={`Share ${name}`}
+        aria-label={`Share ${generic_name}`}
       >
         {isShared ? 'Copied link!' : 'Share Medicine'}
       </Button>
@@ -108,7 +106,7 @@ function ActionPanel({ medicine = {} }) {
       <button
         type="button"
         onClick={handlePrint}
-        aria-label={`Print information for ${name}`}
+        aria-label={`Print information for ${generic_name}`}
         className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 text-left"
       >
         <HiOutlinePrinter size={15} className="text-slate-400" aria-hidden="true" />
@@ -118,7 +116,7 @@ function ActionPanel({ medicine = {} }) {
       <button
         type="button"
         onClick={handleDownloadPdf}
-        aria-label={`Download PDF for ${name}`}
+        aria-label={`Download PDF for ${generic_name}`}
         className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 text-left"
       >
         <HiOutlineDocumentArrowDown size={15} className="text-slate-400" aria-hidden="true" />
@@ -129,7 +127,7 @@ function ActionPanel({ medicine = {} }) {
       <button
         type="button"
         onClick={handleReport}
-        aria-label={`Report incorrect information for ${name}`}
+        aria-label={`Report incorrect information for ${generic_name}`}
         className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-400 text-left"
       >
         <HiOutlineFlag size={15} aria-hidden="true" />

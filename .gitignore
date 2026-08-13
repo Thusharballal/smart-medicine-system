@@ -1,1 +1,27 @@
-node_modules
+# Python
+Backend/.venv/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+
+# Logs
+logs/
+Backend/logs/
+*.log
+
+# Node.js
+node_modules/
+
+# Build output
+Frontend/dist/
+
+# VS Code
+.vscode/
+
+# Operating System
+.DS_Store
+Thumbs.db

@@ -1,15 +1,3 @@
-/**
- * Component: DashboardHeader
- *
- * Description:
- *   Personal healthcare dashboard header showing the user's avatar,
- *   welcome message, current date, and health activity status.
- *
- * Backend readiness:
- *   - user → useAuth().currentUser
- *   - healthStatus → GET /api/v1/users/me/health-summary
- */
-
 import { HiOutlineShieldCheck, HiOutlineCalendar } from 'react-icons/hi2'
 import Avatar from '../../../components/ui/Avatar'
 import Badge  from '../../../components/ui/Badge'
@@ -18,8 +6,8 @@ import { useAuth } from '../../../contexts/AuthContext'
 function DashboardHeader() {
   const { currentUser } = useAuth()
   // TODO: replace with real user from useAuth + health summary from API
-  const name = currentUser?.name ?? 'Demo User'
-  const today = new Date().toLocaleDateString('en-IN', {
+const name = currentUser?.full_name || currentUser?.name || 'User' 
+ const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   })
 

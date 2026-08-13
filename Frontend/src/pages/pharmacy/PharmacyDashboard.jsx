@@ -99,7 +99,7 @@ function PharmacyDashboard() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            to={`${ROUTES.PHARMACY.INVENTORY}/add`}
+            to={ROUTES.PHARMACY.INVENTORY_ADD}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-secondary-600 text-white text-sm font-semibold hover:bg-secondary-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500"
           >
             <HiOutlinePlus size={16} aria-hidden="true" />

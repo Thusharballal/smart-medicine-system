@@ -26,7 +26,6 @@ function ResetPasswordPage() {
   const { resetPassword, isLoading, authError, clearError } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-
   const email = location.state?.email ?? ''
   const otp   = location.state?.otp   ?? ''
 
@@ -44,13 +43,11 @@ function ResetPasswordPage() {
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { password: '', confirmPassword: '' },
   })
-
   const passwordValue = useWatch({ control, name: 'password', defaultValue: '' })
-
   async function onSubmit(data) {
     clearError()
     try {
-      await resetPassword({ email, otp, password: data.password })
+      await resetPassword({ email, otp, new_password: data.password })
       navigate(ROUTES.LOGIN, {
         replace: true,
         state: { message: 'Password reset successful! Please sign in with your new password.' },

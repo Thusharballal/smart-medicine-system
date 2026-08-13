@@ -39,6 +39,14 @@ class MedicineCreateRequest(BaseModel):
         max_length=100
     )
     description: Optional[str] = None
+    branded_price: float = Field(
+        ...,
+        gt=0
+    )
+    jan_aushadhi_price: float = Field(
+        ...,
+        gt=0
+    )
 class MedicineUpdateRequest(BaseModel):
     """ Request schema for updating an existing medicine."""
     generic_name: Optional[str] = Field(
@@ -81,16 +89,38 @@ class MedicineUpdateRequest(BaseModel):
         max_length=100
     )
     description: Optional[str] = None
+    branded_price: Optional[float] = Field(
+        default=None,
+        gt=0
+    )
+    jan_aushadhi_price: Optional[float] = Field(
+        default=None,
+        gt=0
+    )
 class MedicineResponse(BaseModel):
     """Response schema returned to the frontend."""
     id: str
     generic_name: str
     jan_aushadhi_name: str
-    brand_names: List[str]
+    brand_names: List[str] = []
     composition: str
     strength: str
     dosage_form: str
     manufacturer: str
     category: str
-    description: Optional[str]
+    description: Optional[str] = None
+    branded_price: Optional[float] = None
+    jan_aushadhi_price: Optional[float] = None
     is_archived: bool
+class MedicineAlternativeResponse(BaseModel):
+    brand_name: str
+    generic_name: str
+    jan_aushadhi_name: str
+    composition: str
+    strength: str
+    dosage_form: str
+    manufacturer: str
+    category: str
+    branded_price: float
+    jan_aushadhi_price: float
+    savings: float

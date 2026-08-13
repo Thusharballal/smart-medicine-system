@@ -29,14 +29,15 @@ function PublicRoute() {
       </div>
     )
   }
-
   if (isAuthenticated) {
     // Redirect to role-appropriate dashboard
     switch (currentUser?.role) {
       case USER_ROLES.ADMIN:
         return <Navigate to={ROUTES.ADMIN.DASHBOARD} replace />
-      case USER_ROLES.PHARMACIST:
+      case USER_ROLES.PHARMACY_OWNER:
         return <Navigate to={ROUTES.PHARMACY.DASHBOARD} replace />
+
+      case USER_ROLES.USER:
       default:
         return <Navigate to={ROUTES.USER.DASHBOARD} replace />
     }

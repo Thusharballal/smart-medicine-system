@@ -17,17 +17,17 @@
 import { FiLoader } from 'react-icons/fi'
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 font-medium rounded-md ' +
-  'transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 ' +
+  'inline-flex items-center justify-center gap-2 font-medium rounded-xl ' +
+  'transition-all duration-300 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 '  +
   'focus-visible:ring-offset-2 select-none whitespace-nowrap'
 
 const VARIANTS = {
   primary:
     'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 ' +
-    'focus-visible:ring-primary-500 shadow-sm hover:shadow-md',
+    'focus-visible:ring-primary-500 shadow-sm hover:shadow-lg hover:-translate-y-0.5',
   secondary:
     'bg-secondary-600 text-white hover:bg-secondary-700 active:bg-secondary-800 ' +
-    'focus-visible:ring-secondary-500 shadow-sm hover:shadow-md',
+    'focus-visible:ring-secondary-500 shadow-sm hover:shadow-lg hover:-translate-y-0.5',
   outline:
     'border border-primary-600 text-primary-600 bg-transparent ' +
     'hover:bg-primary-50 active:bg-primary-100 focus-visible:ring-primary-500',
@@ -36,7 +36,7 @@ const VARIANTS = {
     'focus-visible:ring-primary-500',
   danger:
     'bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-800 ' +
-    'focus-visible:ring-danger-500 shadow-sm hover:shadow-md',
+    'focus-visible:ring-danger-500 shadow-sm hover:shadow-lg hover:-translate-y-0.5',
 }
 
 const SIZES = {
@@ -45,8 +45,8 @@ const SIZES = {
   lg: 'text-base px-6 py-2.5 h-12',
 }
 
-const DISABLED = 'opacity-50 cursor-not-allowed pointer-events-none'
-
+const DISABLED =
+  'opacity-50 cursor-not-allowed pointer-events-none saturate-50'
 /**
  * @param {object}  props
  * @param {'primary'|'secondary'|'outline'|'ghost'|'danger'} [props.variant='primary']
@@ -96,7 +96,7 @@ function Button({
       {...rest}
     >
       {loading ? (
-        <FiLoader className="animate-spin shrink-0" aria-hidden="true" />
+      <FiLoader className="animate-spin shrink-0 text-current" />
       ) : (
         leftIcon && <span className="shrink-0">{leftIcon}</span>
       )}
