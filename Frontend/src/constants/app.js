@@ -7,16 +7,18 @@
  */
 
 // Application metadata
-export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Smart Medicine System'
-export const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0'
+export const APP_NAME =
+  import.meta.env.VITE_APP_NAME ||
+  'Smart Medicine System'
 
-// User roles — must match the roles returned by the backend
+export const APP_VERSION =
+  import.meta.env.VITE_APP_VERSION ||
+  '1.0.0'
 export const USER_ROLES = {
   USER: 'USER',
   PHARMACY_OWNER: 'PHARMACY_OWNER',
   ADMIN: 'ADMIN',
 }
-
 // Local storage keys
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'sms_access_token',

@@ -1,22 +1,3 @@
-/**
- * NotificationCard Component
- *
- * Purpose : Displays a single notification item in the
- *           notifications panel or dropdown list.
- * Location : src/components/cards/NotificationCard.jsx
- *
- * Types    : info | success | warning | alert
- * Features : read/unread visual state, relative timestamp,
- *            type icon, mark-as-read action, click handler
- *
- * Future usage : Module 4 (notification centre, nav dropdown).
- *
- * Props :
- *   notification — { id, title, description, time, type, isRead }
- *   onRead       — mark-as-read handler
- *   onClick      — card click handler
- */
-
 import { HiOutlineInformationCircle, HiOutlineCheckCircle, HiOutlineExclamationTriangle, HiOutlineBellAlert } from 'react-icons/hi2'
 
 const TYPE_CONFIG = {
