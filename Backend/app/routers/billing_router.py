@@ -11,7 +11,7 @@ from app.services.billing_service import (
     get_bill_history,
     get_bill_by_number,
 )
-from app.utils.jwt_helper import get_current_user
+from app.core.security import get_current_user
 router = APIRouter(
     prefix="/api/v1/billing",
     tags=["Billing"]

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from app.schemas.token_schema import TokenPayload
 from app.schemas.user_schema import UpdateUserRequest
 from app.services.user_service import update_user_profile
-from app.utils.jwt_helper import get_current_user,require_role
+from app.core.security import get_current_user, require_role
 from app.utils.constants import UserRole
 from app.services.user_service import (
     get_user_dashboard,

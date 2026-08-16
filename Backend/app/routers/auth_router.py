@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, status
-from app.schemas.token_schema import TokenPayload
 from app.schemas.auth_schemas import (
     RegisterRequest,
     LoginRequest,
@@ -10,7 +9,7 @@ from app.schemas.auth_schemas import (
     TokenResponse,
     MessageResponse,
 )
-from app.utils.jwt_helper import get_current_user
+from app.core.security import get_current_user 
 from app.services.auth_service import (
     register_user,
     login_user,
@@ -34,8 +33,7 @@ async def authentication_health():
 
 @router.get("/me")
 async def get_me(
-    current_user: TokenPayload = Depends(get_current_user)
-):
+    current_user: dict = Depends(get_current_user)):
     return current_user
 
 @router.post("/register")

@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers.notification_router import router as notification_router
 from app.core.config import settings
 from app.database.connection import connect_to_mongodb, close_mongodb_connection
 from app.routers.auth_router import router as auth_router
@@ -44,3 +45,4 @@ async def root():
 app.include_router(batch_router)
 app.include_router(inventory_router)
 app.include_router(user_router)
+app.include_router(notification_router, prefix="/api/v1")
