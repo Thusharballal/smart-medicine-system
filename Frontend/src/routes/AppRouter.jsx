@@ -25,13 +25,10 @@ import ResetPasswordPage from '../pages/auth/ResetPasswordPage'
 import AdminLoginPage from '../pages/auth/AdminLoginPage'
 import AdminMedicineEdit from '../pages/admin/AdminMedicineEdit'
 import AdminMedicineDetails from '../pages/admin/AdminMedicineDetails'
-
 import NotFoundPage from '../pages/NotFoundPage'
 import UnauthorizedPage from '../pages/UnauthorizedPage'
 import SessionExpiredPage from '../pages/errors/SessionExpiredPage'
-
 const HomePage = lazy(() => import('../pages/home/HomePage'))
-
 const UserDashboard = lazy(() => import('../pages/dashboard/UserDashboard'))
 const MedicineSearchPage = lazy(() => import('../pages/search/MedicineSearchPage'))
 const SearchResultsPage = lazy(() => import('../pages/results/SearchResultsPage'))
@@ -40,7 +37,6 @@ const GenericRecommendationPage = lazy(() => import('../pages/generic/GenericRec
 const NearbyPharmaciesPage = lazy(() => import('../pages/pharmacies/NearbyPharmaciesPage'))
 const NotificationsPage = lazy(() => import('../pages/notifications/NotificationsPage'))
 const ProfilePage = lazy(() => import('../pages/profile/ProfilePage'))
-
 const PharmacyDashboard = lazy(() => import('../pages/pharmacy/PharmacyDashboard'))
 const InventoryDashboard = lazy(() => import('../pages/pharmacy/InventoryDashboard'))
 const InventoryPage = lazy(() => import('../pages/pharmacy/InventoryPage'))
@@ -51,7 +47,6 @@ const BillHistoryPage = lazy(() => import('../pages/pharmacy/BillHistoryPage'))
 const PharmacyReportsPage = lazy(() => import('../pages/pharmacy/PharmacyReportsPage'))
 const AdvancedInventoryPage = lazy(() => import('../pages/pharmacy/AdvancedInventoryPage'))
 const SupplierManagementPage = lazy(() => import('../pages/pharmacy/SupplierManagementPage'))
-
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'))
 const AdminUsers = lazy(() => import('../pages/admin/AdminUsers'))
 const AdminPharmacies = lazy(() => import('../pages/admin/AdminPharmacies'))
@@ -63,10 +58,8 @@ const AdminNotifications = lazy(() => import('../pages/admin/AdminNotifications'
 const AdminActivity = lazy(() => import('../pages/admin/AdminActivity'))
 const AdminRoles = lazy(() => import('../pages/admin/AdminRoles'))
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'))
-
 function AppRouter() {
   const location = useLocation()
-
   useEffect(() => {
     console.log('🌐 NAVIGATION EVENT')
     console.log('   - New pathname:', location.pathname)
@@ -89,41 +82,78 @@ function AppRouter() {
             <Route path="reset-password" element={<ResetPasswordPage />} />
           </Route>
         </Route>
-
+    <Route
+      element={
+        <ProtectedRoute
+          allowedRoles={[USER_ROLES.USER]}
+        />
+      }
+    >
+      <Route element={<UserLayout />}>
+        {/* User Dashboard */}
         <Route
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                USER_ROLES.USER,
-                USER_ROLES.ADMIN,
-              ]}
-            />
-          }
-        >
-          <Route element={<UserLayout />}>
-            <Route path="dashboard" element={<UserDashboard />} />
-            <Route path="search" element={<MedicineSearchPage />} />
-            <Route path="search/results" element={<SearchResultsPage />} />
-            <Route path="medicine/:id" element={<MedicineDetailsPage />} />
-            <Route
-              path="medicine/:id/generic"
-              element={<GenericRecommendationPage />}
-            />
-            <Route
-              path="pharmacies/nearby"
-              element={<NearbyPharmaciesPage />}
-            />
-            <Route
-              path="notifications"
-              element={<NotificationsPage />}
-            />
-            <Route
-              path="profile"
-              element={<ProfilePage />}
-            />
+          path="dashboard"
+          element={<UserDashboard />}
+        />
+        {/* Medicine Search */}
+        <Route
+          path="search"
+          element={<MedicineSearchPage />}
+        />
+        {/* Search Results */}
+        <Route
+          path="search/results"
+          element={<SearchResultsPage />}
+        />
+        {/* Medicine Details */}
+        <Route
+          path="medicine/:id"
+          element={<MedicineDetailsPage />}
+        />
+        {/* Generic / Jan Aushadhi Recommendation */}
+        <Route
+          path="medicine/:id/generic"
+          element={<GenericRecommendationPage />}
+        />
+        {/* Nearby Pharmacies */}
+        <Route
+          path="pharmacies/nearby"
+          element={<NearbyPharmaciesPage />}
+        />
+        {/* Notifications */}
+        <Route
+          path="notifications"
+          element={<NotificationsPage />}
+        />
+        {/* Profile */}
+        <Route
+          path="profile"
+          element={<ProfilePage />}
+        />
+      </Route>
+    </Route>
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  USER_ROLES.USER,
+                  USER_ROLES.ADMIN,
+                ]}
+              />
+            }
+          >
+            <Route element={<UserLayout />}>
+              <Route path="dashboard" element={<UserDashboard />} />
+              <Route
+                path="notifications"
+                element={<NotificationsPage />}
+              />
+              <Route
+                path="profile"
+                element={<ProfilePage />}
+              />
+            </Route>
           </Route>
-        </Route>
-
         <Route
           element={
             <ProtectedRoute

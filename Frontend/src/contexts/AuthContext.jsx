@@ -44,40 +44,48 @@ const AuthContext = createContext(null)
 // =====================================================
 
 export function AuthProvider({ children }) {
-  // ===================================================
-  // Current User
-  // ===================================================
-
   const [currentUser, setCurrentUser] = useState(() => {
-    const user = storage.get(STORAGE_KEYS.USER)
+    const user = storage.get(
+      STORAGE_KEYS.USER
+    )
 
-    console.log('🔐 AuthContext INITIALIZATION')
-    console.log('User from localStorage:', user)
-    console.log('User role:', user?.role)
+    console.log(
+      '🔐 AuthContext INITIALIZATION'
+    )
+
+    console.log(
+      'User from localStorage:',
+      user
+    )
+
+    console.log(
+      'User role:',
+      user?.role
+    )
 
     return user
   })
 
-  // ===================================================
-  // Loading State
-  // ===================================================
+  const [isLoading, setIsLoading] =
+    useState(false)
 
-  const [isLoading, setIsLoading] = useState(false)
-
-  // ===================================================
-  // Authentication Error
-  // ===================================================
-
-  const [authError, setAuthError] = useState(null)
-
-  // ===================================================
-  // Track User Changes
-  // ===================================================
+  const [authError, setAuthError] =
+    useState(null)
 
   useEffect(() => {
-    console.log('🔄 AuthContext: currentUser changed')
-    console.log('New currentUser:', currentUser)
-    console.log('New role:', currentUser?.role)
+    console.log(
+      '🔄 AuthContext: currentUser changed'
+    )
+
+    console.log(
+      'New currentUser:',
+      currentUser
+    )
+
+    console.log(
+      'New role:',
+      currentUser?.role
+    )
   }, [currentUser])
 
   // =====================================================
@@ -93,16 +101,36 @@ export function AuthProvider({ children }) {
   // =====================================================
 
   const storeSession = useCallback(
-    (user, accessToken, refreshToken = null) => {
-      console.log('💾 storeSession() called')
-      console.log('User:', user)
-      console.log('User role:', user?.role)
+    (
+      user,
+      accessToken,
+      refreshToken = null
+    ) => {
       console.log(
-        'Access token:',
-        accessToken ? 'present' : 'missing'
+        '💾 storeSession() called'
       )
 
-      storage.set(STORAGE_KEYS.USER, user)
+      console.log(
+        'User:',
+        user
+      )
+
+      console.log(
+        'User role:',
+        user?.role
+      )
+
+      console.log(
+        'Access token:',
+        accessToken
+          ? 'present'
+          : 'missing'
+      )
+
+      storage.set(
+        STORAGE_KEYS.USER,
+        user
+      )
 
       storage.set(
         STORAGE_KEYS.ACCESS_TOKEN,
@@ -116,7 +144,9 @@ export function AuthProvider({ children }) {
 
       setCurrentUser(user)
 
-      console.log('✅ Session stored successfully')
+      console.log(
+        '✅ Session stored successfully'
+      )
     },
     []
   )
@@ -125,28 +155,35 @@ export function AuthProvider({ children }) {
   // Update Current User
   // =====================================================
 
-  const updateCurrentUser = useCallback((updatedUser) => {
-    console.log(
-      '🔄 Updating current user:',
-      updatedUser
-    )
+  const updateCurrentUser = useCallback(
+    (updatedUser) => {
+      console.log(
+        '🔄 Updating current user:',
+        updatedUser
+      )
 
-    storage.set(
-      STORAGE_KEYS.USER,
-      updatedUser
-    )
+      storage.set(
+        STORAGE_KEYS.USER,
+        updatedUser
+      )
 
-    setCurrentUser(updatedUser)
-  }, [])
+      setCurrentUser(updatedUser)
+    },
+    []
+  )
 
   // =====================================================
   // Clear Session
   // =====================================================
 
   const clearSession = useCallback(() => {
-    console.log('🚪 Clearing authentication session')
+    console.log(
+      '🚪 Clearing authentication session'
+    )
 
-    storage.remove(STORAGE_KEYS.USER)
+    storage.remove(
+      STORAGE_KEYS.USER
+    )
 
     storage.remove(
       STORAGE_KEYS.ACCESS_TOKEN
@@ -169,303 +206,371 @@ export function AuthProvider({ children }) {
       setAuthError(null)
 
       try {
-        console.log('🔐 Login started')
-        console.log('Login email:', credentials?.email)
+        console.log(
+          '🔐 Login started'
+        )
 
-        // -----------------------------------------------
-        // Step 1: Call FastAPI login
-        // -----------------------------------------------
+        console.log(
+          'Login email:',
+          credentials?.email
+        )
 
         const response =
-          await authService.login(credentials)
+          await authService.login(
+            credentials
+          )
 
-        const data = response.data
+        const data =
+          response.data
 
         console.log(
           'Login response:',
           data
         )
 
-        // -----------------------------------------------
-        // Step 2: Get JWT token
-        // -----------------------------------------------
-
         const accessToken =
           data?.access_token
+
         if (!accessToken) {
           throw new Error(
             'Access token was not returned by the backend.'
           )
         }
-        // -----------------------------------------------
-        // Step 3: Store token BEFORE /auth/me
-        // -----------------------------------------------
+
         storage.set(
           STORAGE_KEYS.ACCESS_TOKEN,
           accessToken
         )
+
         console.log(
           '✅ Access token stored'
         )
-        // -----------------------------------------------
-        // Step 4: Get authenticated user
-        // -----------------------------------------------
+
         console.log(
           '👤 Fetching authenticated user...'
         )
+
         const userResponse =
-          await axiosClient.get('/auth/me')
+          await axiosClient.get(
+            '/auth/me'
+          )
+
         const user =
           userResponse.data
+
         console.log(
           '✅ Authenticated user:',
           user
         )
-        // -----------------------------------------------
-        // Step 5: Store complete session
-        // -----------------------------------------------
+
         storeSession(
           user,
           accessToken,
           data?.refresh_token ?? null
         )
+
         console.log(
           '✅ Login completed successfully'
         )
+
         return user
+
       } catch (error) {
         console.error(
           '❌ Login failed:',
           error
         )
+
         const message =
           error?.response?.data?.detail ??
           error?.response?.data?.message ??
           error?.message ??
           'Login failed. Please try again.'
+
         setAuthError(message)
+
         throw error
+
       } finally {
         setIsLoading(false)
       }
     },
     [storeSession]
   )
+
   // =====================================================
   // REGISTER
   // =====================================================
+
   const register = useCallback(
     async (payload) => {
       setIsLoading(true)
       setAuthError(null)
+
       try {
         console.log(
           '📝 Registration started'
         )
+
         await authService.register(
           payload
         )
+
         console.log(
           '✅ Registration successful'
         )
+
         return {
           email: payload.email,
         }
+
       } catch (error) {
         console.error(
           '❌ Registration failed:',
           error
         )
+
         const message =
           error?.response?.data?.detail ??
           error?.response?.data?.message ??
           'Registration failed. Please try again.'
+
         setAuthError(message)
+
         throw error
+
       } finally {
         setIsLoading(false)
       }
     },
     []
   )
+
   // =====================================================
   // VERIFY OTP
   // =====================================================
+
   const verifyOtp = useCallback(
     async (payload) => {
       setIsLoading(true)
       setAuthError(null)
+
       try {
         console.log(
           '🔢 OTP verification started'
         )
+
         await authService.verifyOtp({
           email: payload.email,
           otp: payload.otp,
           flow: payload.flow,
         })
+
         console.log(
           '✅ OTP verified successfully'
         )
+
         return true
+
       } catch (error) {
         console.error(
           '❌ OTP verification failed:',
           error
         )
+
         const message =
           error?.response?.data?.detail ??
           error?.response?.data?.message ??
           'Invalid or expired OTP.'
+
         setAuthError(message)
+
         throw error
+
       } finally {
         setIsLoading(false)
       }
     },
     []
   )
+
   // =====================================================
   // RESEND OTP
   // =====================================================
+
   const resendOtp = useCallback(
     async (payload) => {
       setIsLoading(true)
       setAuthError(null)
+
       try {
         console.log(
           '📧 Resending OTP'
         )
+
         await authService.resendOtp({
           email: payload.email,
         })
+
         console.log(
           '✅ OTP resent successfully'
         )
+
         return true
+
       } catch (error) {
         console.error(
           '❌ Resend OTP failed:',
           error
         )
+
         const message =
           error?.response?.data?.detail ??
           error?.response?.data?.message ??
           'Failed to resend OTP.'
+
         setAuthError(message)
+
         throw error
+
       } finally {
         setIsLoading(false)
       }
     },
     []
   )
+
   // =====================================================
   // FORGOT PASSWORD
   // =====================================================
+
   const forgotPassword = useCallback(
     async (payload) => {
       setIsLoading(true)
       setAuthError(null)
+
       try {
         console.log(
           '🔑 Forgot password request'
         )
+
         await authService.forgotPassword(
           payload
         )
+
         console.log(
           '✅ Password reset OTP sent'
         )
+
         return {
           email: payload.email,
         }
+
       } catch (error) {
         console.error(
           '❌ Forgot password failed:',
           error
         )
+
         const message =
           error?.response?.data?.detail ??
           error?.response?.data?.message ??
           'Failed to send reset OTP.'
+
         setAuthError(message)
+
         throw error
+
       } finally {
         setIsLoading(false)
       }
     },
     []
   )
+
   // =====================================================
   // RESET PASSWORD
   // =====================================================
+
   const resetPassword = useCallback(
     async (payload) => {
       setIsLoading(true)
       setAuthError(null)
+
       try {
         console.log(
           '🔐 Reset password started'
         )
+
         await authService.resetPassword({
           email: payload.email,
           otp: payload.otp,
           new_password:
             payload.new_password,
         })
+
         console.log(
           '✅ Password reset successful'
         )
+
         return true
+
       } catch (error) {
         console.error(
           '❌ Reset password failed:',
           error
         )
+
         const message =
           error?.response?.data?.detail ??
           error?.response?.data?.message ??
           'Failed to reset password.'
+
         setAuthError(message)
+
         throw error
+
       } finally {
         setIsLoading(false)
       }
     },
     []
   )
+
   // =====================================================
   // LOGOUT
   // =====================================================
+
   const logout = useCallback(() => {
     console.log(
       '🚪 Logging out user'
     )
+
     clearSession()
+
     console.log(
       '✅ Logout completed'
     )
   }, [clearSession])
+
   // =====================================================
   // Context Value
   // =====================================================
+
   const value = {
-    // User
     currentUser,
-    // Authentication status
+
     isAuthenticated:
       !!currentUser,
-    // Demo mode is disabled
+
     isDemo: false,
-    // Loading/error state
+
     isLoading,
     authError,
 
-    // Helpers
     clearError,
     updateCurrentUser,
-    // Authentication actions
+
     login,
     register,
     verifyOtp,
@@ -474,6 +579,7 @@ export function AuthProvider({ children }) {
     resetPassword,
     logout,
   }
+
   // =====================================================
   // Provider
   // =====================================================
@@ -484,20 +590,26 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   )
 }
+
 // =====================================================
 // useAuth Hook
 // =====================================================
+
 export function useAuth() {
   const context =
     useContext(AuthContext)
+
   if (!context) {
     throw new Error(
       'useAuth must be used within an AuthProvider'
     )
   }
+
   return context
 }
+
 // =====================================================
 // Default Export
 // =====================================================
+
 export default AuthContext

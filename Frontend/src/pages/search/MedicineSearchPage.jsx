@@ -1,231 +1,381 @@
-/**
- * Component: MedicineSearchPage
- *
- * Description:
- *   Complete medicine search interface for the Smart Medicine
- *   Availability & Intelligent Janaushadhi Recommendation System.
- *
- * Responsibilities:
- *   - Manage shared search query + UI state across sections
- *   - Compose all search page sections in specification order
- *   - Act as a layout orchestrator with minimal business logic
- *   - Render within UserLayout (Sidebar + TopBar provided by layout)
- *
- * Section order (Module 7A complete specification):
- *   1. SearchHeaderSection      — hero title + illustration
- *   2. SearchInputSection       — primary search bar + example pills
- *        └─ SearchSuggestions   — inline below the search bar
- *   3. QuickActionsSection      — 4 quick action cards
- *   4. RecentSearchesSection    — recent search history
- *   5. PopularMedicinesSection  — popular medicine chips
- *   6. MedicineCategoriesSection — category browse grid
- *   7. SearchFiltersSection     — collapsible filter panel
- *   8. SearchLoadingSection     — skeleton placeholders (shown when loading)
- *   9. SearchEmptyState         — no-results UI
- *  10. SearchErrorState         — error / retry UI
- *
- * Route: /search (inside ProtectedRoute → UserLayout)
- *
- * Backend readiness:
- *   - Search      → GET /api/v1/medicines/search?q={query}
- *   - Suggestions → GET /api/v1/medicines/suggest?q={query}
- *   - Popular     → GET /api/v1/medicines/popular
- *   - Recent      → GET /api/v1/users/me/recent-searches
- *   - Categories  → GET /api/v1/medicines/categories
- *   - Filters     → POST /api/v1/medicines/search with filter body
- *   All deferred to Module 7B.
- *
- * Dependencies:
- *   - UserLayout (via React Router nesting — automatic)
- *   - All section components (./sections/*)
- *   - Divider (components/ui)
- */
-
 import { useState, useCallback } from 'react'
-import { useNavigate }            from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { HiOutlineArrowLeft } from 'react-icons/hi2'
 
 // ── Sections ──────────────────────────────────────────────────────────────────
-import SearchHeaderSection       from './sections/SearchHeaderSection'
-import SearchInputSection        from './sections/SearchInputSection'
-import SearchSuggestionsSection  from './sections/SearchSuggestionsSection'
-import QuickActionsSection       from './sections/QuickActionsSection'
-import RecentSearchesSection     from './sections/RecentSearchesSection'
-import PopularMedicinesSection   from './sections/PopularMedicinesSection'
+import SearchHeaderSection from './sections/SearchHeaderSection'
+import SearchInputSection from './sections/SearchInputSection'
+import SearchSuggestionsSection from './sections/SearchSuggestionsSection'
+import QuickActionsSection from './sections/QuickActionsSection'
+import RecentSearchesSection from './sections/RecentSearchesSection'
+import PopularMedicinesSection from './sections/PopularMedicinesSection'
 import MedicineCategoriesSection from './sections/MedicineCategoriesSection'
-import SearchFiltersSection      from './sections/SearchFiltersSection'
-import SearchLoadingSection      from './sections/SearchLoadingSection'
-import SearchEmptyState          from './sections/SearchEmptyState'
-import SearchErrorState          from './sections/SearchErrorState'
+import SearchFiltersSection from './sections/SearchFiltersSection'
+import SearchLoadingSection from './sections/SearchLoadingSection'
+import SearchEmptyState from './sections/SearchEmptyState'
+import SearchErrorState from './sections/SearchErrorState'
 
 import Divider from '../../components/ui/Divider'
 import { ROUTES } from '../../constants/routes'
 
-// =====================================================
-// Medicine Search Page
-// =====================================================
 function MedicineSearchPage() {
-  const [query,           setQuery]           = useState('')
+  // =====================================================
+  // Search state
+  // =====================================================
+
+  const [query, setQuery] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
 
-  // Placeholder UI-state flags for loading / empty / error demos
-  // TODO: Module 7B will replace these with actual async states
-  // from TanStack Query (isLoading, isError, data.length === 0).
-  const [demoState] = useState('idle') // 'idle' | 'loading' | 'empty' | 'error'
+  // =====================================================
+  // Demo state
+  //
+  // Later replace this with real API state.
+  // =====================================================
+
+  const [demoState] = useState('idle')
+  // Possible values:
+  // 'idle'
+  // 'loading'
+  // 'empty'
+  // 'error'
 
   const navigate = useNavigate()
 
-  // ── Shared handlers ──────────────────────────────────────────────────────
-  const handleSearch = useCallback((value) => {
-    const trimmed = (value ?? query).trim()
-    if (!trimmed) return
-    setShowSuggestions(false)
-    // TODO: Module 7B — navigate to /search/results?q=...
-    navigate(`${ROUTES.USER.SEARCH_RESULTS}?q=${encodeURIComponent(trimmed)}`)
-  }, [query, navigate])
+  // =====================================================
+  // Search
+  // =====================================================
+
+  const handleSearch = useCallback(
+    (value) => {
+      const trimmed = (value ?? query).trim()
+
+      if (!trimmed) {
+        return
+      }
+
+      setShowSuggestions(false)
+
+      navigate(
+        `${ROUTES.USER.SEARCH_RESULTS}?q=${encodeURIComponent(trimmed)}`
+      )
+    },
+    [query, navigate]
+  )
+
+  // =====================================================
+  // Query change
+  // =====================================================
 
   const handleQueryChange = useCallback((value) => {
     setQuery(value)
-    setShowSuggestions(value.trim().length > 0)
+
+    setShowSuggestions(
+      value.trim().length > 0
+    )
   }, [])
 
-  const handleSuggestionSelect = useCallback((name) => {
-    setQuery(name)
-    setShowSuggestions(false)
-    handleSearch(name)
-  }, [handleSearch])
+  // =====================================================
+  // Suggestion selected
+  // =====================================================
+
+  const handleSuggestionSelect = useCallback(
+    (name) => {
+      setQuery(name)
+      setShowSuggestions(false)
+
+      handleSearch(name)
+    },
+    [handleSearch]
+  )
+
+  // =====================================================
+  // Close suggestions
+  // =====================================================
 
   const handleCloseSuggestions = useCallback(() => {
     setShowSuggestions(false)
   }, [])
 
-  const handleCategorySelect = useCallback((_categoryId) => {
-    // TODO: Module 7B — apply category filter to search results
-  }, [])
+  // =====================================================
+  // Category selection
+  // =====================================================
 
-  const handleFiltersApply = useCallback((_filters) => {
-    // TODO: Module 7B — pass filter payload to search API
-  }, [])
+  const handleCategorySelect = useCallback(
+    (categoryId) => {
+      /*
+       * TODO: Module 7B
+       *
+       * Connect category selection to the backend
+       * medicine search API.
+       *
+       * Example:
+       * GET /api/v1/medicines/search?category={categoryId}
+       */
+
+      console.log('Selected medicine category:', categoryId)
+    },
+    []
+  )
+
+  // =====================================================
+  // Apply filters
+  // =====================================================
+
+  const handleFiltersApply = useCallback(
+    (filters) => {
+      /*
+       * TODO: Module 7B
+       *
+       * Send filters to the backend search API.
+       */
+
+      console.log('Applied medicine filters:', filters)
+    },
+    []
+  )
+
+  // =====================================================
+  // Reset filters
+  // =====================================================
 
   const handleFiltersReset = useCallback(() => {
-    // TODO: Module 7B — clear all active filters
+    /*
+     * TODO: Module 7B
+     *
+     * Clear active search filters.
+     */
+
+    console.log('Medicine search filters reset')
   }, [])
+
+  // =====================================================
+  // Retry
+  // =====================================================
 
   const handleRetrySearch = useCallback(() => {
     setQuery('')
     setShowSuggestions(false)
-    // TODO: Module 7B — re-trigger search or focus input
   }, [])
 
+  // =====================================================
+  // Back to Dashboard
+  // =====================================================
+
+  const handleBackToDashboard = useCallback(() => {
+    navigate(ROUTES.USER.DASHBOARD)
+  }, [navigate])
+
   return (
-    <article aria-label="Medicine Search">
+    <article
+      aria-label="Medicine Search"
+      className="
+        w-full
+        max-w-7xl
+        mx-auto
+      "
+    >
 
-      {/* ===================================================== */}
-      {/* Search Header                                         */}
-      {/* ===================================================== */}
-      <SearchHeaderSection />
+      {/* =====================================================
+          1. BACK TO DASHBOARD
+         ===================================================== */}
 
-      <Divider className="my-0" />
+      <div className="mb-3">
 
-      {/* ===================================================== */}
-      {/* Smart Search Interface                                */}
-      {/* ===================================================== */}
-      <SearchInputSection
-        query={query}
-        onQueryChange={handleQueryChange}
-        onSearch={handleSearch}
-      />
+        <button
+          type="button"
+          onClick={handleBackToDashboard}
+          className="
+            inline-flex
+            items-center
+            gap-2
+            px-3
+            py-2
+            rounded-lg
+            border
+            border-slate-200
+            bg-white
+            text-sm
+            font-medium
+            text-slate-600
+            shadow-sm
+            hover:bg-slate-50
+            hover:text-primary-600
+            hover:border-primary-200
+            transition-colors
+            focus-visible:outline-none
+            focus-visible:ring-2
+            focus-visible:ring-primary-500
+            focus-visible:ring-offset-2
+          "
+        >
+          <HiOutlineArrowLeft
+            size={16}
+            aria-hidden="true"
+          />
 
-      {/* ===================================================== */}
-      {/* Search Suggestions (appears when query non-empty)     */}
-      {/* ===================================================== */}
+          Back to Dashboard
+        </button>
+
+      </div>
+
+      {/* =====================================================
+          2. PRIMARY SEARCH
+          
+          This stays at the top so the user can immediately
+          search for a medicine.
+         ===================================================== */}
+
+      <section
+        aria-label="Primary medicine search"
+        className="
+          bg-white
+          rounded-2xl
+        "
+      >
+
+        <SearchInputSection
+          query={query}
+          onQueryChange={handleQueryChange}
+          onSearch={handleSearch}
+        />
+
+      </section>
+
+      {/* =====================================================
+          3. SEARCH SUGGESTIONS
+          
+          Suggestions appear directly below the search bar.
+         ===================================================== */}
+
       {showSuggestions && (
-        <div className="max-w-3xl mx-auto -mt-2 pb-2">
+        <div
+          className="
+            max-w-3xl
+            mx-auto
+            -mt-3
+            px-4
+            sm:px-6
+            relative
+            z-30
+          "
+        >
+
           <SearchSuggestionsSection
             query={query}
             onSelect={handleSuggestionSelect}
             onClose={handleCloseSuggestions}
           />
+
         </div>
       )}
 
-      <Divider className="mt-2 mb-0" />
+      {/* =====================================================
+          4. HERO / INFORMATION BACKGROUND
+          
+          SearchHeaderSection contains:
+          - Background illustration
+          - Find Medicines Faster & Smarter
+          - Description
+          - Trust badges
 
-      {/* ===================================================== */}
-      {/* Quick Actions                                         */}
-      {/* ===================================================== */}
+          The content is displayed over the background.
+         ===================================================== */}
+
+      <div className="mt-2">
+
+        <SearchHeaderSection />
+
+      </div>
+
+      <Divider className="my-0" />
+
+      {/* =====================================================
+          5. QUICK ACTIONS
+         ===================================================== */}
+
       <QuickActionsSection />
 
       <Divider className="my-0" />
 
-      {/* ===================================================== */}
-      {/* Recent Searches                                       */}
-      {/* ===================================================== */}
-      <RecentSearchesSection onSearch={handleSearch} />
+      {/* =====================================================
+          6. RECENT SEARCHES
+         ===================================================== */}
+
+      <RecentSearchesSection
+        onSearch={handleSearch}
+      />
 
       <Divider className="my-0" />
 
-      {/* ===================================================== */}
-      {/* Popular Medicines                                     */}
-      {/* ===================================================== */}
-      <PopularMedicinesSection onSearch={handleSearch} />
+      {/* =====================================================
+          7. POPULAR MEDICINES
+         ===================================================== */}
+
+      <PopularMedicinesSection
+        onSearch={handleSearch}
+      />
 
       <Divider className="my-0" />
 
-      {/* ===================================================== */}
-      {/* Medicine Categories                                   */}
-      {/* ===================================================== */}
-      <MedicineCategoriesSection onCategorySelect={handleCategorySelect} />
+      {/* =====================================================
+          8. MEDICINE CATEGORIES
+         ===================================================== */}
+
+      <MedicineCategoriesSection
+        onCategorySelect={handleCategorySelect}
+      />
 
       <Divider className="my-0" />
 
-      {/* ===================================================== */}
-      {/* Search Filters                                        */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          9. SEARCH FILTERS
+         ===================================================== */}
+
       <SearchFiltersSection
         onApply={handleFiltersApply}
         onReset={handleFiltersReset}
       />
 
-      {/*
-        =====================================================
-        Loading / Empty / Error states
-        These are rendered conditionally based on the async
-        state of the search API in Module 7B.
-        Currently shown as demo blocks — replace the
-        demoState variable with real TanStack Query state.
-        =====================================================
-      */}
+      {/* =====================================================
+          10. LOADING STATE
+         ===================================================== */}
 
-      {/* ===================================================== */}
-      {/* Loading State                                         */}
-      {/* Shown when: isLoading === true (Module 7B)            */}
-      {/* ===================================================== */}
       {demoState === 'loading' && (
         <>
           <Divider className="my-0" />
-          <SearchLoadingSection variant="results" />
+
+          <SearchLoadingSection
+            variant="results"
+          />
         </>
       )}
 
-      {/* ===================================================== */}
-      {/* Empty State                                           */}
-      {/* Shown when: !isLoading && results.length === 0        */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          11. EMPTY STATE
+         ===================================================== */}
+
       {demoState === 'empty' && (
         <>
           <Divider className="my-0" />
-          <SearchEmptyState query={query} onRetry={handleRetrySearch} />
+
+          <SearchEmptyState
+            query={query}
+            onRetry={handleRetrySearch}
+          />
         </>
       )}
 
-      {/* ===================================================== */}
-      {/* Error State                                           */}
-      {/* Shown when: isError === true (Module 7B)              */}
-      {/* ===================================================== */}
+      {/* =====================================================
+          12. ERROR STATE
+         ===================================================== */}
+
       {demoState === 'error' && (
         <>
           <Divider className="my-0" />
-          <SearchErrorState onRetry={handleRetrySearch} />
+
+          <SearchErrorState
+            onRetry={handleRetrySearch}
+          />
         </>
       )}
 

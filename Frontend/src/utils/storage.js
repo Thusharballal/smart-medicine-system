@@ -1,16 +1,7 @@
-/**
- * Storage Utilities
- *
- * Thin wrappers around localStorage that:
- *  - Serialise / deserialise JSON automatically
- *  - Suppress errors if localStorage is unavailable (e.g. private browsing)
- *  - Provide a typed, consistent API across the codebase
- */
-
 export const storage = {
   get(key) {
     try {
-      const item = localStorage.getItem(key)
+      const item = sessionStorage.getItem(key)
       return item ? JSON.parse(item) : null
     } catch {
       return null
@@ -19,15 +10,15 @@ export const storage = {
 
   set(key, value) {
     try {
-      localStorage.setItem(key, JSON.stringify(value))
+      sessionStorage.setItem(key, JSON.stringify(value))
     } catch {
-      // Storage quota exceeded or unavailable — silently ignore
+      // Storage unavailable — silently ignore
     }
   },
 
   remove(key) {
     try {
-      localStorage.removeItem(key)
+      sessionStorage.removeItem(key)
     } catch {
       // Silently ignore
     }
@@ -35,7 +26,7 @@ export const storage = {
 
   clear() {
     try {
-      localStorage.clear()
+      sessionStorage.clear()
     } catch {
       // Silently ignore
     }

@@ -1,15 +1,3 @@
-/**
- * Component: SearchInputSection
- *
- * Enhanced with Voice Search and OCR Scan buttons.
- * Modals are rendered here — state lifted to this component only.
- *
- * ⚠ Voice Search — placeholder only. TODO: Web Speech API integration.
- *   Backend: POST /api/v1/search/voice (FastAPI + speech-to-text)
- * ⚠ OCR Scan — placeholder only. TODO: Tesseract.js / FastAPI OCR.
- *   Backend: POST /api/v1/ocr/scan (FastAPI + Tesseract)
- */
-
 import { useState, useCallback } from 'react'
 import { HiOutlineCommandLine, HiOutlineMicrophone, HiOutlineCamera } from 'react-icons/hi2'
 import SearchBar        from '../../../components/common/SearchBar'

@@ -1,29 +1,3 @@
-/**
- * Application Entry Point
- *
- * Mounts the React application into the DOM and wraps it with
- * all global providers in the correct dependency order:
- *
- *   AppErrorBoundary    — catches unhandled errors → ServerErrorPage
- *   StrictMode          — React development checks
- *   BrowserRouter       — client-side routing
- *   QueryClientProvider — TanStack React Query (server-state cache)
- *   ThemeProvider       — light/dark theme state
- *   AuthProvider        — authentication state + actions
- *   UserProvider        — extended user profile state
- *   ToastContainer      — global toast notifications
- *
- * Provider ordering:
- *   AppErrorBoundary wraps everything so no error escapes to a blank screen.
- *   BrowserRouter must wrap AuthProvider so auth actions can navigate.
- *   QueryClient must wrap AuthProvider so queries can be invalidated on logout.
- *
- * Future Backend Ready:
- *   // TODO: Add NotificationProvider when GET /api/v1/users/me/notifications is ready
- *   // TODO: Add MedicineContextProvider when ML recommendation API is ready
- *   // TODO: Add AnalyticsProvider when tracking API is integrated
- */
-
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'

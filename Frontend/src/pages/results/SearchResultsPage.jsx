@@ -1,17 +1,23 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import medicineService from '../../services/medicineService'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { HiOutlineArrowLeft } from 'react-icons/hi2'
+
 import SearchSummarySection from './sections/SearchSummarySection'
 import ResultsToolbar from './sections/ResultsToolbar'
 import ResultsGrid from './sections/ResultsGrid'
 import CompareBar from './sections/CompareBar'
 import SearchEmptyState from '../search/sections/SearchEmptyState'
 import { ROUTES } from '../../constants/routes'
+
 const MAX_COMPARE = 4
+
 function SearchResultsPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+
   const query = searchParams.get('q') ?? ''
+
   // ── UI state ──────────────────────────────────────────────────────────
   const [layout, setLayout] = useState('grid')
   const [sortBy, setSortBy] = useState('relevance')
@@ -31,36 +37,24 @@ function SearchResultsPage() {
         setIsLoading(true)
         setIsError(false)
 
-        const response = await medicineService.search({
-          q: query,
-        })
+        const response = await medicineService.search(query)
 
         const formattedMedicines = response.data.map((medicine) => ({
           ...medicine,
 
-          // ── Important mapping for your project ──────────────────────
-          // Brand search → Generic → Jan Aushadhi
+          // Brand → Generic → Jan Aushadhi mapping
           isJanAushadhi: Boolean(medicine.jan_aushadhi_name),
           isGeneric: Boolean(medicine.generic_name),
 
-          // Display Jan Aushadhi medicine as the main name
           name: medicine.jan_aushadhi_name,
-
-          // Display generic medicine below the main name
           genericName: medicine.generic_name,
 
-          // Existing card fields
           composition: medicine.composition,
           manufacturer: medicine.manufacturer,
           strength: medicine.strength,
 
-          // Medicine type
           type: medicine.dosage_form,
-
-          // Category
           category: medicine.category,
-
-          // Price
           price: medicine.price,
         }))
 
@@ -156,13 +150,36 @@ function SearchResultsPage() {
     navigate(ROUTES.USER.SEARCH)
   }, [navigate])
 
+  const handleBackToDashboard = useCallback(() => {
+    navigate(ROUTES.USER.DASHBOARD)
+  }, [navigate])
+
   // ── Selected medicines ────────────────────────────────────────────────
   const selectedMedicines = sortedMedicines.filter((medicine) =>
     selectedIds.has(medicine.id)
   )
 
   return (
-    <article aria-label="Search Results">
+    <article
+      aria-label="Search Results"
+      className="w-full max-w-7xl mx-auto"
+    >
+      {/* ===================================================== */}
+      {/* Back to Dashboard                                     */}
+      {/* ===================================================== */}
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={handleBackToDashboard}
+          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
+          <HiOutlineArrowLeft
+            size={16}
+            aria-hidden="true"
+          />
+          Back to Dashboard
+        </button>
+      </div>
 
       {/* ===================================================== */}
       {/* Search Summary                                        */}
@@ -193,7 +210,6 @@ function SearchResultsPage() {
       {/* Search Results                                        */}
       {/* ===================================================== */}
       <div className="mt-4">
-
         {isLoading ? (
           <div className="p-8 text-center text-slate-500">
             Searching medicines...
@@ -201,6 +217,7 @@ function SearchResultsPage() {
         ) : isError ? (
           <div className="p-8 text-center text-red-600">
             Failed to search medicines.
+
             <button
               type="button"
               onClick={handleRetrySearch}
@@ -224,7 +241,6 @@ function SearchResultsPage() {
             onRetry={handleRetrySearch}
           />
         )}
-
       </div>
 
       {/* ===================================================== */}
@@ -241,4 +257,5 @@ function SearchResultsPage() {
     </article>
   )
 }
+
 export default SearchResultsPage
