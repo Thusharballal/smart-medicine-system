@@ -1,17 +1,3 @@
-/**
- * Register Page
- *
- * Route     : /register  (inside AuthLayout → PublicRoute)
- * Purpose   : New user account creation.
- *
- * Features  : full name, email, mobile, password, confirm password,
- *             password strength meter, show/hide password,
- *             terms checkbox, validation (Zod + RHF),
- *             loading state, error state.
- *
- * On success → navigates to /verify-otp passing email via state.
- */
-
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'

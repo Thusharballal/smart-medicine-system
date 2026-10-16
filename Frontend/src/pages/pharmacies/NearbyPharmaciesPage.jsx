@@ -1,135 +1,301 @@
-/**
- * Component: NearbyPharmacyWorkflow
- *
- * Description:
- *   Displays nearby pharmacies, medicine availability,
- *   interactive map, pharmacy details,
- *   navigation preview and reservation workflow.
- *
- * Responsibilities:
- *   - Manage selected pharmacy state shared across map + list + details panel
- *   - Compose all 9 sections in specification order
- *   - Two-column layout: list+map (left) + details panel (right) on desktop
- *
- * Route: /pharmacies/nearby (ProtectedRoute → UserLayout)
- *
- * Backend readiness:
- *   - pharmacies → GET /api/v1/pharmacies/nearby?lat=...&lng=...&medicine=...
- *   - pharmacy detail → GET /api/v1/pharmacies/:id
- *   - availability    → GET /api/v1/pharmacies/:id/inventory?medicine=...
- *   All API integrations deferred to Module 10.
- */
+  import { useEffect, useState } from 'react'
+  import { useSearchParams } from 'react-router-dom'
+  import PharmacySearchSummary from './sections/PharmacySearchSummary'
+  import InteractiveMapSection from './sections/InteractiveMapSection'
+  import NearbyPharmacyList from './sections/NearbyPharmacyList'
+  import PharmacyDetailsPanel from './sections/PharmacyDetailsPanel'
+  import ReservationSection from './sections/ReservationSection'
+  import NavigationPreview from './sections/NavigationPreview'
+  import PharmacyWorkflowTimeline from './sections/PharmacyWorkflowTimeline'
+  import PharmacyTips from './sections/PharmacyTips'
+  import medicineService from '../../services/medicineService'
+  import HealthcareDisclaimer from '../medicine/sections/HealthcareDisclaimer'
+  import Divider from '../../components/ui/Divider'
+  function NearbyPharmaciesPage() {
+    // =====================================================
+    // URL PARAMETER
+    // Expected URL:
+    // /pharmacies/nearby?medicine_id=123
+    // =====================================================
+    const [searchParams] = useSearchParams()
+    const medicineId = searchParams.get('medicine_id')
+    // =====================================================
+    // MEDICINE STATE
+    // =====================================================
+    const [medicine, setMedicine] = useState(null)
+    const [medicineLoading, setMedicineLoading] =
+      useState(false)
+    const [medicineError, setMedicineError] =
+      useState(false)
+    // =====================================================
+    // SELECTED PHARMACY
+    // =====================================================
+    const [selectedId, setSelectedId] =
+      useState(null)
 
-import { useState } from 'react'
-import PharmacySearchSummary    from './sections/PharmacySearchSummary'
-import InteractiveMapSection    from './sections/InteractiveMapSection'
-import NearbyPharmacyList       from './sections/NearbyPharmacyList'
-import PharmacyDetailsPanel     from './sections/PharmacyDetailsPanel'
-import ReservationSection       from './sections/ReservationSection'
-import NavigationPreview        from './sections/NavigationPreview'
-import PharmacyWorkflowTimeline from './sections/PharmacyWorkflowTimeline'
-import PharmacyTips             from './sections/PharmacyTips'
-import HealthcareDisclaimer     from '../medicine/sections/HealthcareDisclaimer'
-import Divider                  from '../../components/ui/Divider'
+    // =====================================================
+    // USER LOCATION
+    // Filled by InteractiveMapSection
+    // =====================================================
 
-// Placeholder medicine context
-// TODO: read from URL search params or React context
-const PLACEHOLDER_MEDICINE = {
-  name:        'Crocin 500',
-  genericName: 'Paracetamol IP 500mg',
-}
+    const [userLocation, setUserLocation] =
+      useState(null)
 
-function NearbyPharmaciesPage() {
-  const [selectedId, setSelectedId] = useState(null)
+    // =====================================================
+    // DEBUG - MEDICINE ID
+    // Remove later if not needed
+    // =====================================================
 
-  function handleViewDetails(id) {
-    setSelectedId(id)
-  }
+    useEffect(() => {
+      console.log(
+        'NearbyPharmaciesPage - Medicine ID:',
+        medicineId
+      )
+    }, [medicineId])
 
-  function handleReserve(pharmacyId) {
-    setSelectedId(pharmacyId)
-    // Scroll to reservation section
-    document.getElementById('reservation-section')?.scrollIntoView({ behavior: 'smooth' })
-  }
+    // =====================================================
+    // FETCH MEDICINE
+    // =====================================================
 
-  return (
-    <article aria-label="Nearby Pharmacies" className="flex flex-col gap-5">
+    useEffect(() => {
+      // No medicine ID in URL
+      if (!medicineId) {
+        setMedicine(null)
+        setMedicineLoading(false)
+        setMedicineError(false)
 
-      {/* =======================================================
-          Pharmacy Search Summary
-         ======================================================= */}
-      <PharmacySearchSummary medicine={PLACEHOLDER_MEDICINE} pharmacyCount={8} />
+        return
+      }
 
-      {/* =======================================================
-          Interactive Map
-         ======================================================= */}
-      <InteractiveMapSection
-        selectedPharmacyId={selectedId}
-        onSelectPharmacy={setSelectedId}
-      />
+      async function fetchMedicine() {
+        try {
+          setMedicineLoading(true)
+          setMedicineError(false)
 
-      <Divider className="my-0" />
+          console.log(
+            'Fetching medicine:',
+            medicineId
+          )
 
-      {/* Two-column layout: list (left) + details (right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+          const response =
+            await medicineService.getById(
+              medicineId
+            )
 
-        {/* Left column: list + reservation + navigation */}
-        <div className="flex flex-col gap-5">
+          console.log(
+            'Nearby page medicine response:',
+            response.data
+          )
 
-          {/* =======================================================
-              Nearby Pharmacies
-             ======================================================= */}
-          <NearbyPharmacyList
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onViewDetails={handleViewDetails}
-            onReserve={handleReserve}
+          setMedicine(response.data)
+        } catch (error) {
+          console.error(
+            'Nearby Page Medicine Error:',
+            error
+          )
+          setMedicine(null)
+          setMedicineError(true)
+        } finally {
+          setMedicineLoading(false)
+        }
+      }
+      fetchMedicine()
+    }, [medicineId])
+
+    // =====================================================
+    // VIEW PHARMACY DETAILS
+    // =====================================================
+
+    function handleViewDetails(id) {
+      setSelectedId(id)
+    }
+
+    // =====================================================
+    // RESERVE MEDICINE
+    // =====================================================
+
+    function handleReserve(pharmacyId) {
+      setSelectedId(pharmacyId)
+
+      document
+        .getElementById('reservation-section')
+        ?.scrollIntoView({
+          behavior: 'smooth',
+        })
+    }
+
+    // =====================================================
+    // NO MEDICINE ID
+    // =====================================================
+
+    if (!medicineId) {
+      return (
+        <article
+          aria-label="Nearby Pharmacies"
+          className="p-6"
+        >
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
+            <h2 className="font-semibold text-amber-800">
+              Medicine not selected
+            </h2>
+
+            <p className="mt-1 text-sm text-amber-700">
+              Please select a medicine first and then
+              open nearby pharmacies.
+            </p>
+          </div>
+        </article>
+      )
+    }
+
+    // =====================================================
+    // MEDICINE LOADING
+    // =====================================================
+
+    if (medicineLoading) {
+      return (
+        <article
+          aria-label="Nearby Pharmacies"
+          className="p-6"
+        >
+          <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+            <p className="text-sm text-slate-500">
+              Loading medicine information...
+            </p>
+          </div>
+        </article>
+      )
+    }
+
+    // =====================================================
+    // MEDICINE ERROR
+    // =====================================================
+
+    if (medicineError || !medicine) {
+      return (
+        <article
+          aria-label="Nearby Pharmacies"
+          className="p-6"
+        >
+          <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+            <h2 className="font-semibold text-red-800">
+              Failed to load medicine information
+            </h2>
+
+            <p className="mt-1 text-sm text-red-700">
+              The selected medicine could not be loaded.
+              Please return to medicine search and try
+              again.
+            </p>
+          </div>
+        </article>
+      )
+    }
+
+    // =====================================================
+    // MAIN PAGE
+    // =====================================================
+
+    return (
+      <article
+        aria-label="Nearby Pharmacies"
+        className="flex flex-col gap-5"
+      >
+        {/* =====================================================
+            PHARMACY SEARCH SUMMARY
+          ===================================================== */}
+
+          <PharmacySearchSummary
+            medicine={medicine}
+            pharmacyCount={0}
+            userLocation={userLocation}
           />
+        {/* =====================================================
+            INTERACTIVE MAP
 
-          {/* =======================================================
-              Reservation Placeholder
-             ======================================================= */}
-          <div id="reservation-section">
-            <ReservationSection pharmacyId={selectedId} />
+            IMPORTANT:
+            Real medicineId is passed here.
+          ===================================================== */}
+
+        <InteractiveMapSection
+          medicineId={medicineId}
+          selectedPharmacyId={selectedId}
+          onSelectPharmacy={setSelectedId}
+          onLocationChange={setUserLocation}
+        />
+
+        <Divider className="my-0" />
+
+        {/* =====================================================
+            TWO COLUMN LAYOUT
+          ===================================================== */}
+
+        <div className="grid grid-cols-1 gap-6 items-start lg:grid-cols-[minmax(0,1fr)_340px]">
+          {/* ===================================================
+              LEFT COLUMN
+            =================================================== */}
+          <div className="flex flex-col gap-5">
+            {/* =================================================
+                NEARBY PHARMACIES
+              ================================================= */}
+
+            <NearbyPharmacyList
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onViewDetails={handleViewDetails}
+              onReserve={handleReserve}
+              userLocation={userLocation}
+              medicineId={medicineId}
+            />
+
+            {/* =================================================
+                RESERVATION
+              ================================================= */}
+
+            <div id="reservation-section">
+              <ReservationSection
+                pharmacyId={selectedId}
+              />
+            </div>
+
+            {/* =================================================
+                NAVIGATION PREVIEW
+              ================================================= */}
+
+            <NavigationPreview />
+
           </div>
 
-          {/* =======================================================
-              Navigation Preview
-             ======================================================= */}
-          <NavigationPreview />
+          {/* ===================================================
+              RIGHT COLUMN
+            =================================================== */}
 
+          <div className="lg:sticky lg:top-20 flex min-w-0 flex-col gap-5">
+
+            {/* =================================================
+                PHARMACY DETAILS
+              ================================================= */}
+
+            <PharmacyDetailsPanel
+              pharmacyId={selectedId}
+            />
+            {/* =================================================
+                PHARMACY WORKFLOW
+              ================================================= */}
+
+            <PharmacyWorkflowTimeline />
+          </div>
         </div>
-
-        {/* Right column: pharmacy details + workflow + tips */}
-        <div className="lg:sticky lg:top-16 flex flex-col gap-5">
-
-          {/* =======================================================
-              Pharmacy Details
-             ======================================================= */}
-          <PharmacyDetailsPanel pharmacyId={selectedId} />
-
-          {/* =======================================================
-              Workflow Timeline
-             ======================================================= */}
-          <PharmacyWorkflowTimeline />
-
-        </div>
-      </div>
-
-      <Divider className="my-0" />
-
-      {/* =======================================================
-          Smart Pharmacy Tips
-         ======================================================= */}
-      <PharmacyTips />
-
-      {/* =======================================================
-          Healthcare Disclaimer (reused from medicine details)
-         ======================================================= */}
-      <HealthcareDisclaimer />
-
-    </article>
-  )
-}
-
-export default NearbyPharmaciesPage
+        <Divider className="my-0" />
+        {/* =====================================================
+            SMART PHARMACY TIPS
+          ===================================================== */}
+        <PharmacyTips />
+        {/* =====================================================
+            HEALTHCARE DISCLAIMER
+          ===================================================== */}
+        <HealthcareDisclaimer />
+      </article>
+    )
+  }
+  export default NearbyPharmaciesPage

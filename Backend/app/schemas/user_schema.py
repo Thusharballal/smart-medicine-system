@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr,Field
 from datetime import datetime
+from pydantic import BaseModel, EmailStr, Field
+from app.utils.constants import UserRole, UserStatus
 class UserDashboardResponse(BaseModel):
     full_name: str
     email: EmailStr
@@ -15,7 +16,7 @@ class UserProfileResponse(BaseModel):
     status: str
     is_email_verified: bool
 class UpdateUserRequest(BaseModel):
-    """ Request schema for updating the logged-in user's profile. """
+    """Request schema for updating the logged-in user's profile."""
     full_name: str = Field(
         ...,
         min_length=3,
@@ -38,16 +39,8 @@ class AdminUpdateUserRequest(BaseModel):
         min_length=10,
         max_length=15
     )
-    role: str = Field(
-        ...,
-        min_length=2,
-        max_length=30
-    )
-    status: str = Field(
-        ...,
-        min_length=2,
-        max_length=30
-    )
+    role: UserRole
+    status: UserStatus
 class AdminUserResponse(BaseModel):
     """User information returned to Admin."""
     id: str

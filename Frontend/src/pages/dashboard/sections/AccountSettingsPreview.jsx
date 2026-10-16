@@ -1,15 +1,3 @@
-/**
- * Component: AccountSettingsPreview
- *
- * Description:
- *   Compact account settings card linking to full settings.
- *   Reuses Avatar and Toggle for theme/notification toggles.
- *
- * Backend readiness:
- *   - profile → GET /api/v1/users/me
- *   - update  → PUT /api/v1/users/me
- */
-
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -21,15 +9,12 @@ import Toggle  from '../../../components/forms/Toggle'
 import Badge   from '../../../components/ui/Badge'
 import { useAuth } from '../../../contexts/AuthContext'
 import { ROUTES } from '../../../constants/routes'
-
 function AccountSettingsPreview() {
   const { currentUser } = useAuth()
   const name  = currentUser?.name  ?? 'Demo User'
   const email = currentUser?.email ?? 'demo@example.com'
   const role  = currentUser?.role  ?? 'patient'
-
   const [notifEnabled, setNotifEnabled] = useState(true)
-
   return (
     <section aria-labelledby="account-settings-heading">
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
@@ -43,7 +28,6 @@ function AccountSettingsPreview() {
             <HiOutlinePencil size={13} aria-hidden="true" /> Edit Profile
           </Link>
         </div>
-
         {/* Profile row */}
         <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 mb-4">
           <Avatar name={name} size="md" />
@@ -53,7 +37,6 @@ function AccountSettingsPreview() {
             <Badge variant="primary" size="sm" className="mt-0.5">{role}</Badge>
           </div>
         </div>
-
         {/* Settings rows */}
         <div className="space-y-3 text-xs">
           <div className="flex items-center justify-between py-2 border-b border-slate-50">
@@ -77,5 +60,4 @@ function AccountSettingsPreview() {
     </section>
   )
 }
-
 export default AccountSettingsPreview

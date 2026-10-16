@@ -11,30 +11,38 @@ from app.services.billing_service import (
     get_bill_history,
     get_bill_by_number,
 )
-from app.core.security import get_current_user
+from app.core.security import get_current_pharmacy
 router = APIRouter(
     prefix="/api/v1/billing",
-    tags=["Billing"]
+    tags=["Billing"],
 )
+# ============================================================
+# CREATE BILL
+# ============================================================
 @router.post(
     "",
     response_model=BillResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create Bill",
+    summary="Create New Bill",
 )
 async def create_new_bill(
     bill_data: CreateBillRequest,
-    current_user: dict = Depends(get_current_user),
+    current_pharmacy: dict = Depends(get_current_pharmacy),
 ):
-    """Create a new bill."""
-
+    """
+    Create a new pharmacy bill.
+    Authentication:
+        Pharmacy Owner only
+    The pharmacy is determined from the authenticated JWT.
+    The client does not provide pharmacy_id.
+    """
     return await create_bill(
         bill_data=bill_data,
-        current_user=current_user,
+        current_pharmacy=current_pharmacy,
     )
-
-
-
+# ============================================================
+# BILL HISTORY
+# ============================================================
 @router.get(
     "/history",
     response_model=BillHistoryResponse,
@@ -42,30 +50,29 @@ async def create_new_bill(
     summary="Get Bill History",
 )
 async def get_bills_history(
-    page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(10, ge=1, le=100, description="Items per page"),
-    search: Optional[str] = Query(None, description="Search by bill number, customer name, or phone"),
-    status: Optional[str] = Query(None, description="Filter by payment status (paid, pending, cancelled)"),
-    current_user: dict = Depends(get_current_user),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
+    search: Optional[str] = Query(default=None),
+    status: Optional[str] = Query(default=None),
+    current_pharmacy: dict = Depends(get_current_pharmacy),
 ):
     """
-    Get paginated bill history with optional search and filters.
-    
-    Query Parameters:
-    - page: Page number (default: 1)
-    - page_size: Number of bills per page (default: 10, max: 100)
-    - search: Search by bill number, customer name, or phone
-    - status: Filter by payment status (paid, pending, cancelled)
+    Get bills belonging only to the authenticated pharmacy.
+    Supports:
+        - Pagination
+        - Search
+        - Payment status filtering
     """
     return await get_bill_history(
         page=page,
         page_size=page_size,
         search=search,
-        status_filter=status,
-        current_user=current_user,
+        status=status,
+        current_pharmacy=current_pharmacy,
     )
-
-
+# ============================================================
+# BILL DETAILS
+# ============================================================
 @router.get(
     "/{bill_number}",
     response_model=BillDetailResponse,
@@ -74,15 +81,14 @@ async def get_bills_history(
 )
 async def get_bill_details(
     bill_number: str,
-    current_user: dict = Depends(get_current_user),
+    current_pharmacy: dict = Depends(get_current_pharmacy),
 ):
     """
-    Get complete bill details by bill number.
-    
-    Path Parameters:
-    - bill_number: The bill number to retrieve
+    Get a single bill by bill number.
+    Only bills belonging to the authenticated pharmacy
+    can be accessed.
     """
     return await get_bill_by_number(
         bill_number=bill_number,
-        current_user=current_user,
+        current_pharmacy=current_pharmacy,
     )

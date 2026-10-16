@@ -1,11 +1,22 @@
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 class BatchModel(BaseModel):
-    """Represents a medicine batch stored in the inventory.
-    Each batch belongs to one medicine in the master database. """
+    """
+    Represents a medicine batch stored in the inventory.
+    Each batch belongs to:
+    - one medicine
+    - one pharmacy
+    The pharmacy relationship is required so that Nearby Pharmacy can show real-time stock."""
+    # ============================================================
+    # References
+    # ============================================================
     # Reference to Medicine Master
     medicine_id: str
+    # Reference to Pharmacy
+    pharmacy_id: str
+    # ============================================================
     # Batch Information
+    # ============================================================
     batch_number: str = Field(
         ...,
         min_length=3,
@@ -13,7 +24,9 @@ class BatchModel(BaseModel):
     )
     manufacturing_date: datetime
     expiry_date: datetime
+    # ============================================================
     # Stock Information
+    # ============================================================
     quantity_received: int = Field(
         ...,
         gt=0
@@ -22,7 +35,9 @@ class BatchModel(BaseModel):
         ...,
         ge=0
     )
+    # ============================================================
     # Pricing
+    # ============================================================
     purchase_price: float = Field(
         ...,
         gt=0
@@ -31,7 +46,9 @@ class BatchModel(BaseModel):
         ...,
         gt=0
     )
+    # ============================================================
     # Supplier Details
+    # ============================================================
     supplier_name: str = Field(
         ...,
         min_length=2,
@@ -42,9 +59,13 @@ class BatchModel(BaseModel):
         min_length=2,
         max_length=100
     )
+    # ============================================================
     # Archive Status
+    # ============================================================
     is_archived: bool = False
+    # ============================================================
     # Audit Fields
+    # ============================================================
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )

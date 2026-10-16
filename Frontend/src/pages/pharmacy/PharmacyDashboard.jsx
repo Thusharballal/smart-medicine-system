@@ -1,25 +1,3 @@
-/**
- * Component: PharmacyDashboard
- *
- * Description:
- *   Professional dashboard for pharmacy staff.
- *
- * Responsibilities:
- *   • Inventory Management
- *   • Medicine Management
- *   • Stock Monitoring
- *   • Expiry Monitoring
- *   • Dashboard Analytics
- *   • Notification Center
- *
- * Route: /pharmacy/dashboard  (ProtectedRoute → PharmacyLayout)
- *
- * Backend readiness:
- *   All data is local placeholder. Replace with TanStack Query:
- *     useQuery(['pharmacy-stats'], () => inventoryService.getStats())
- *     useQuery(['inventory'], () => inventoryService.getAll())
- */
-
 import { useState } from 'react'
 import { Link }     from 'react-router-dom'
 import {

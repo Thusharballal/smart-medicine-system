@@ -1,11 +1,5 @@
-/**
- * Batch Service
- *
- * Handles pharmacy inventory batch API calls.
- */
 
 import axiosClient from '../config/axiosClient'
-
 const batchService = {
   // Add a new medicine batch
   create: (data) =>

@@ -1,11 +1,4 @@
-/**
- * Medicine Service
- *
- * Handles medicine master API calls.
- */
-
 import axiosClient from '../config/axiosClient'
-
 const medicineService = {
   // Get all medicines
   getAll: () =>

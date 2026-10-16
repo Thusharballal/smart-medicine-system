@@ -14,10 +14,8 @@ import SearchFiltersSection from './sections/SearchFiltersSection'
 import SearchLoadingSection from './sections/SearchLoadingSection'
 import SearchEmptyState from './sections/SearchEmptyState'
 import SearchErrorState from './sections/SearchErrorState'
-
 import Divider from '../../components/ui/Divider'
 import { ROUTES } from '../../constants/routes'
-
 function MedicineSearchPage() {
   // =====================================================
   // Search state

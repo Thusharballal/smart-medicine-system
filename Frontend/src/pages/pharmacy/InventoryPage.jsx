@@ -11,83 +11,143 @@ import {
   HiOutlineXMark,
   HiOutlineArchiveBox,
   HiOutlineExclamationTriangle,
-  HiOutlineClock,
+  HiOutlineFunnel,
+  HiOutlineEllipsisVertical,
+  HiOutlineCalendarDays,
+  HiOutlineBuildingStorefront,
+  HiOutlineInformationCircle,
+   HiOutlineCurrencyRupee,
+  HiOutlineCube,
+  HiOutlinePencilSquare,
+  HiOutlineCheck,
 } from 'react-icons/hi2'
-import { MdMedication, MdInventory2 } from 'react-icons/md'
-import Badge from '../../components/ui/Badge'
-import Button from '../../components/ui/Button'
-import { ROUTES } from '../../constants/routes'
+import { MdInventory2 } from 'react-icons/md'
+import ROUTES from '../../constants/routes'
 import batchService from '../../services/batchService'
 import medicineService from '../../services/medicineService'
-
-const PAGE_SIZE = 8
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Status helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ==========================================================
+// STATUS CONFIGURATION
+// ==========================================================
 const STATUS_CONFIG = {
   available: {
     label: 'Available',
-    variant: 'success',
-    text: 'text-success-600',
-    bg: 'bg-success-50',
-    border: 'border-success-200',
+    badge: 'success',
+    className: 'bg-green-100 text-green-700',
   },
+
   low: {
     label: 'Low Stock',
-    variant: 'warning',
-    text: 'text-warning-600',
-    bg: 'bg-warning-50',
-    border: 'border-warning-200',
+    badge: 'warning',
+    className: 'bg-yellow-100 text-yellow-700',
   },
+
   critical: {
     label: 'Critical',
-    variant: 'danger',
-    text: 'text-danger-600',
-    bg: 'bg-danger-50',
-    border: 'border-danger-200',
+    badge: 'danger',
+    className: 'bg-red-100 text-red-700',
   },
+
   out: {
     label: 'Out of Stock',
-    variant: 'danger',
-    text: 'text-danger-600',
-    bg: 'bg-danger-50',
-    border: 'border-danger-200',
+    badge: 'danger',
+    className: 'bg-red-100 text-red-700',
   },
+
   expiring: {
-    label: 'Near Expiry',
-    variant: 'warning',
-    text: 'text-orange-600',
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
+    label: 'Expiring Soon',
+    badge: 'warning',
+    className: 'bg-orange-100 text-orange-700',
   },
 }
 
-const STATUS_TABS = [
-  { value: '', label: 'All Medicines' },
-  { value: 'available', label: 'Available' },
-  { value: 'low', label: 'Low Stock' },
-  { value: 'critical', label: 'Critical' },
-  { value: 'out', label: 'Out of Stock' },
-  { value: 'expiring', label: 'Near Expiry' },
-]
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+// ==========================================================
+// HELPER FUNCTIONS
+// ==========================================================
 
-function getId(item) {
-  return item?.id || item?._id || ''
+const getValue = (object, ...keys) => {
+  for (const key of keys) {
+    if (
+      object &&
+      object[key] !== undefined &&
+      object[key] !== null
+    ) {
+      return object[key]
+    }
+  }
+
+  return null
 }
 
-function formatDate(value) {
-  if (!value) return '-'
+
+// ----------------------------------------------------------
+// ObjectId helper
+// ----------------------------------------------------------
+
+const getId = (object) => {
+  if (!object) return null
+
+  return (
+    object.id ||
+    object._id ||
+    object.medicine_id ||
+    object.batch_id ||
+    null
+  )
+}
+
+
+// ----------------------------------------------------------
+// Number helper
+// ----------------------------------------------------------
+
+const toNumber = (value) => {
+  const number = Number(value)
+
+  return Number.isFinite(number) ? number : 0
+}
+
+
+// ----------------------------------------------------------
+// Date helper
+// ----------------------------------------------------------
+
+const parseDate = (value) => {
+  if (!value) return null
 
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {
-    return '-'
+    return null
+  }
+
+  return date
+}
+
+
+// ----------------------------------------------------------
+// Currency
+// ----------------------------------------------------------
+
+const formatCurrency = (value) => {
+  const amount = toNumber(value)
+
+  return `₹${amount.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+}
+
+
+// ----------------------------------------------------------
+// Date formatting
+// ----------------------------------------------------------
+
+const formatDate = (value) => {
+  const date = parseDate(value)
+
+  if (!date) {
+    return '—'
   }
 
   return date.toLocaleDateString('en-IN', {
@@ -97,30 +157,311 @@ function formatDate(value) {
   })
 }
 
-function getDaysUntilExpiry(value) {
-  if (!value) return Infinity
 
-  const expiry = new Date(value)
-  const now = new Date()
+// ----------------------------------------------------------
+// Days until expiry
+// ----------------------------------------------------------
 
-  if (Number.isNaN(expiry.getTime())) {
-    return Infinity
+const getDaysUntilExpiry = (value) => {
+  const expiryDate = parseDate(value)
+
+  if (!expiryDate) {
+    return null
   }
 
+  const now = new Date()
+
+  const difference =
+    expiryDate.getTime() - now.getTime()
+
   return Math.ceil(
-    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    difference / (1000 * 60 * 60 * 24)
   )
 }
 
-function getStatus(batch) {
-  const quantity = Number(batch.available_quantity ?? 0)
-  const daysUntilExpiry = getDaysUntilExpiry(batch.expiry_date)
+
+// ==========================================================
+// MEDICINE NORMALIZATION
+// ==========================================================
+
+const normalizeMedicine = (medicine) => {
+  if (!medicine) {
+    return null
+  }
+
+  return {
+    id:
+      medicine.id ||
+      medicine._id ||
+      medicine.medicine_id ||
+      null,
+
+    genericName:
+      medicine.generic_name ||
+      medicine.genericName ||
+      medicine.name ||
+      'Unknown Medicine',
+
+    janAushadhiName:
+      medicine.jan_aushadhi_name ||
+      medicine.janAushadhiName ||
+      medicine.janaushadhi_name ||
+      '—',
+
+    brandName:
+      medicine.brand_name ||
+      medicine.brandName ||
+      medicine.brand ||
+      '—',
+
+    brandMapping:
+      medicine.brand_mapping ||
+      medicine.brandMapping ||
+      '—',
+
+    composition:
+      medicine.composition ||
+      '—',
+
+    strength:
+      medicine.strength ||
+      '—',
+
+    manufacturer:
+      medicine.manufacturer ||
+      '—',
+
+    category:
+      medicine.category ||
+      '—',
+
+    dosageForm:
+      medicine.dosage_form ||
+      medicine.dosageForm ||
+      '—',
+
+    mrp:
+      medicine.mrp ??
+      medicine.maximum_retail_price ??
+      medicine.maximumRetailPrice ??
+      0,
+
+    janAushadhiMrp:
+      medicine.jan_aushadhi_mrp ??
+      medicine.janAushadhiMrp ??
+      0,
+
+    isArchived:
+      medicine.is_archived ??
+      medicine.isArchived ??
+      false,
+  }
+}
+
+
+// ==========================================================
+// BATCH NORMALIZATION
+// ==========================================================
+
+const normalizeBatch = (batch, medicine) => {
+  const normalizedMedicine =
+    normalizeMedicine(medicine)
+
+  const quantity = toNumber(
+    getValue(
+      batch,
+      'available_quantity',
+      'availableQuantity',
+      'quantity',
+      'stock',
+    )
+  )
+
+  const minimumStock = toNumber(
+    getValue(
+      batch,
+      'minimum_stock',
+      'minimumStock',
+      'min_stock',
+      'minStock',
+    )
+  )
+
+  const purchasePrice = toNumber(
+    getValue(
+      batch,
+      'purchase_price',
+      'purchasePrice',
+    )
+  )
+
+  const sellingPrice = toNumber(
+    getValue(
+      batch,
+      'selling_price',
+      'sellingPrice',
+      'sale_price',
+      'salePrice',
+      'mrp',
+    )
+  )
+
+  const expiryDate =
+    getValue(
+      batch,
+      'expiry_date',
+      'expiryDate',
+    )
+
+  const batchNumber =
+    getValue(
+      batch,
+      'batch_number',
+      'batchNumber',
+      'batch_no',
+      'batchNo',
+    ) || '—'
+
+  const medicineId =
+    getValue(
+      batch,
+      'medicine_id',
+      'medicineId',
+    ) ||
+    normalizedMedicine?.id ||
+    null
+
+  const batchId =
+    getValue(
+      batch,
+      'id',
+      '_id',
+      'batch_id',
+      'batchId',
+    ) || null
+
+  return {
+    id: batchId,
+
+    batchId,
+
+    medicineId,
+
+    medicine: normalizedMedicine,
+
+    genericName:
+      normalizedMedicine?.genericName ||
+      'Unknown Medicine',
+
+    janAushadhiName:
+      normalizedMedicine?.janAushadhiName ||
+      '—',
+
+    brandName:
+      normalizedMedicine?.brandName ||
+      '—',
+
+    composition:
+      normalizedMedicine?.composition ||
+      '—',
+
+    strength:
+      normalizedMedicine?.strength ||
+      '—',
+
+    manufacturer:
+      normalizedMedicine?.manufacturer ||
+      '—',
+
+    category:
+      normalizedMedicine?.category ||
+      '—',
+
+    dosageForm:
+      normalizedMedicine?.dosageForm ||
+      '—',
+
+    batchNumber,
+
+    quantity,
+
+    availableQuantity: quantity,
+
+    minimumStock,
+
+    purchasePrice,
+
+    sellingPrice,
+
+    // IMPORTANT: MRP belongs to the batch.
+    // Do not fall back to the medicine-level MRP.
+    mrp: sellingPrice,
+
+    expiryDate,
+
+    supplier:
+      getValue(
+        batch,
+        'supplier',
+        'supplier_name',
+        'supplierName',
+      ) || '—',
+
+    invoiceNumber:
+      getValue(
+        batch,
+        'invoice_number',
+        'invoiceNumber',
+      ) || '—',
+
+    location:
+      getValue(
+        batch,
+        'storage_location',
+        'storageLocation',
+        'location',
+      ) || '—',
+
+    status:
+      getStatus(batch),
+  }
+}
+
+
+// ==========================================================
+// STATUS CALCULATION
+// ==========================================================
+
+const getStatus = (batch) => {
+  const quantity = toNumber(
+    getValue(
+      batch,
+      'available_quantity',
+      'availableQuantity',
+      'quantity',
+      'stock',
+    )
+  )
 
   if (quantity <= 0) {
     return 'out'
   }
 
-  if (daysUntilExpiry <= 90) {
+  const expiryDate =
+    getValue(
+      batch,
+      'expiry_date',
+      'expiryDate',
+    )
+
+  const daysUntilExpiry =
+    getDaysUntilExpiry(expiryDate)
+
+  if (
+    daysUntilExpiry !== null &&
+    daysUntilExpiry >= 0 &&
+    daysUntilExpiry <= 90
+  ) {
     return 'expiring'
   }
 
@@ -135,1161 +476,2113 @@ function getStatus(batch) {
   return 'available'
 }
 
-function getMedicineName(medicine) {
-  if (!medicine) return 'Unknown Medicine'
 
-  if (medicine.name) return medicine.name
+// ==========================================================
+// COMPONENT
+// ==========================================================
 
-  if (Array.isArray(medicine.brand_names) && medicine.brand_names.length > 0) {
-    return medicine.brand_names[0]
-  }
+const InventoryPage = () => {
+  // --------------------------------------------------------
+  // State
+  // --------------------------------------------------------
 
-  return medicine.generic_name || 'Unknown Medicine'
-}
-
-function normalizeMedicine(medicine) {
-  const id = getId(medicine)
-
-  return {
-    id,
-    name: getMedicineName(medicine),
-    genericName: medicine.generic_name || '-',
-    janAushadhiName: medicine.jan_aushadhi_name || '-',
-    composition: medicine.composition || '-',
-    strength: medicine.strength || '-',
-    dosageForm: medicine.dosage_form || '-',
-    manufacturer: medicine.manufacturer || '-',
-    category: medicine.category || '-',
-    description: medicine.description || '',
-    brandedPrice: medicine.branded_price ?? null,
-    janAushadhiPrice: medicine.jan_aushadhi_price ?? null,
-  }
-}
-
-function normalizeBatch(batch, medicine) {
-  const status = getStatus(batch)
-
-  return {
-    id: getId(batch),
-    medicineId: batch.medicine_id,
-    name: getMedicineName(medicine),
-    genericName: medicine?.generic_name || '-',
-    janAushadhiName: medicine?.jan_aushadhi_name || '-',
-    composition: medicine?.composition || '-',
-    strength: medicine?.strength || '-',
-    dosageForm: medicine?.dosage_form || '-',
-    manufacturer: medicine?.manufacturer || '-',
-    category: medicine?.category || '-',
-
-    batch: batch.batch_number || '-',
-    mfgDate: formatDate(batch.manufacturing_date),
-    expiry: formatDate(batch.expiry_date),
-
-    quantityReceived: Number(batch.quantity_received ?? 0),
-    qty: Number(batch.available_quantity ?? 0),
-
-    purchasePrice: Number(batch.purchase_price ?? 0),
-    price: Number(batch.mrp ?? 0),
-
-    supplier: batch.supplier_name || '-',
-    invoiceNumber: batch.invoice_number || '-',
-
-    status,
-
-    createdAt: batch.created_at,
-    updatedAt: batch.updated_at,
-    lastUpdated: formatDate(batch.updated_at || batch.created_at),
-
-    isArchived: Boolean(batch.is_archived),
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Modal
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ModalShell({ title, onClose, children, size = 'md' }) {
-  const widths = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-2xl',
-  }
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-[400] flex items-center justify-center p-4"
-    >
-      <div
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      <div
-        className={`relative bg-white rounded-2xl shadow-xl w-full ${widths[size]} max-h-[90vh] flex flex-col`}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="text-base font-bold text-slate-900">
-            {title}
-          </h2>
-
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="flex items-center justify-center w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100"
-          >
-            <HiOutlineXMark size={18} />
-          </button>
-        </div>
-
-        <div className="overflow-y-auto px-6 py-5">
-          {children}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// View details
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ViewDetailsModal({ item, onClose }) {
-  const config = STATUS_CONFIG[item.status]
-
-  const rows = [
-    ['Medicine', item.name],
-    ['Generic Name', item.genericName],
-    ['Jan Aushadhi Name', item.janAushadhiName],
-    ['Composition', item.composition],
-    ['Strength', item.strength],
-    ['Dosage Form', item.dosageForm],
-    ['Manufacturer', item.manufacturer],
-    ['Category', item.category],
-    ['Batch Number', item.batch],
-    ['Manufacturing Date', item.mfgDate],
-    ['Expiry Date', item.expiry],
-    ['Quantity Received', item.quantityReceived],
-    ['Available Quantity', item.qty],
-    ['Purchase Price', `₹ ${item.purchasePrice.toFixed(2)}`],
-    ['MRP', `₹ ${item.price.toFixed(2)}`],
-    ['Supplier', item.supplier],
-    ['Invoice Number', item.invoiceNumber],
-  ]
-
-  return (
-    <ModalShell
-      title="Medicine Details"
-      onClose={onClose}
-      size="lg"
-    >
-      <div className="flex items-center gap-3 mb-5 p-4 rounded-xl bg-slate-50 border border-slate-100">
-        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-secondary-100">
-          <MdMedication
-            size={24}
-            className="text-secondary-600"
-          />
-        </div>
-
-        <div>
-          <p className="text-base font-bold text-slate-900">
-            {item.name}
-          </p>
-
-          <div className="flex items-center gap-2 mt-1">
-            <Badge
-              variant={config.variant}
-              size="sm"
-              dot
-            >
-              {config.label}
-            </Badge>
-
-            <span className="text-lg font-extrabold text-slate-900">
-              {item.qty}
-            </span>
-
-            <span className="text-xs text-slate-400">
-              units
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="divide-y divide-slate-50">
-        {rows.map(([label, value]) => (
-          <div
-            key={label}
-            className="flex justify-between gap-4 py-2.5 text-xs"
-          >
-            <span className="text-slate-500 font-medium">
-              {label}
-            </span>
-
-            <span className="text-slate-900 font-semibold text-right max-w-[60%]">
-              {value}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex justify-end mt-6 pt-4 border-t border-slate-100">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onClose}
-        >
-          Close
-        </Button>
-      </div>
-    </ModalShell>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Delete / Archive dialog
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ArchiveDialog({ item, onConfirm, onClose, loading }) {
-  return (
-    <ModalShell
-      title="Archive Batch"
-      onClose={onClose}
-      size="sm"
-    >
-      <div className="flex flex-col items-center text-center gap-4">
-        <div className="flex items-center justify-center w-14 h-14 rounded-full bg-danger-100">
-          <HiOutlineTrash
-            size={26}
-            className="text-danger-600"
-          />
-        </div>
-
-        <div>
-          <p className="text-sm font-semibold text-slate-900">
-            Are you sure you want to archive this batch?
-          </p>
-
-          <p className="text-sm text-primary-700 font-bold mt-1">
-            {item.name}
-          </p>
-
-          <p className="text-xs text-slate-500 mt-1">
-            Batch: {item.batch}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onClose}
-          disabled={loading}
-        >
-          Cancel
-        </Button>
-
-        <Button
-          type="button"
-          variant="danger"
-          onClick={onConfirm}
-          disabled={loading}
-        >
-          {loading ? 'Archiving...' : 'Archive Batch'}
-        </Button>
-      </div>
-    </ModalShell>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mobile card
-// ─────────────────────────────────────────────────────────────────────────────
-
-function MobileCard({ item, onView, onArchive }) {
-  const config = STATUS_CONFIG[item.status]
-
-  return (
-    <div
-      className={`flex flex-col gap-3 p-4 rounded-xl border ${config.bg} ${config.border}`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-white">
-            <MdMedication
-              size={16}
-              className={config.text}
-            />
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-slate-900 truncate">
-              {item.name}
-            </p>
-
-            <p className="text-xs text-slate-500 truncate">
-              {item.genericName}
-            </p>
-          </div>
-        </div>
-
-        <Badge
-          variant={config.variant}
-          size="sm"
-        >
-          {config.label}
-        </Badge>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 text-xs">
-        <div>
-          <p className="text-slate-400">Batch</p>
-          <p className="font-semibold text-slate-700 truncate">
-            {item.batch}
-          </p>
-        </div>
-
-        <div>
-          <p className="text-slate-400">Expiry</p>
-          <p className="font-semibold text-slate-700 truncate">
-            {item.expiry}
-          </p>
-        </div>
-
-        <div>
-          <p className="text-slate-400">Stock</p>
-          <p className={`text-lg font-extrabold ${config.text}`}>
-            {item.qty}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => onView(item)}
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50"
-        >
-          <HiOutlineEye size={13} />
-          View
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onArchive(item)}
-          className="flex items-center justify-center gap-1 py-1.5 px-3 rounded-lg border border-danger-200 bg-danger-50 text-xs text-danger-600 hover:bg-danger-100"
-        >
-          <HiOutlineTrash size={13} />
-          Archive
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Inventory Page
-// ─────────────────────────────────────────────────────────────────────────────
-
-function InventoryPage() {
   const [inventory, setInventory] = useState([])
 
   const [loading, setLoading] = useState(true)
+
+  const [refreshing, setRefreshing] =
+    useState(false)
+
   const [error, setError] = useState('')
 
-  const [search, setSearch] = useState('')
-  const [activeTab, setActiveTab] = useState('')
-  const [sortKey, setSortKey] = useState('name')
-  const [sortDir, setSortDir] = useState('asc')
-  const [page, setPage] = useState(1)
+  const [searchTerm, setSearchTerm] =
+    useState('')
 
-  const [modal, setModal] = useState(null)
-  const [archiveLoading, setArchiveLoading] = useState(false)
+  const [activeStatus, setActiveStatus] =
+    useState('all')
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Load REAL inventory from backend
-  // ───────────────────────────────────────────────────────────────────────────
+  const [sortField, setSortField] =
+    useState('genericName')
 
-  async function loadInventory() {
+  const [sortDirection, setSortDirection] =
+    useState('asc')
+
+  const [selectedItem, setSelectedItem] =
+    useState(null)
+
+  const [showDetailsModal, setShowDetailsModal] =
+    useState(false)
+
+  const [showArchiveModal, setShowArchiveModal] =
+    useState(false)
+
+  const [showEditModal, setShowEditModal] =
+    useState(false)
+
+  const [editing, setEditing] =
+    useState(false)
+
+  const [editForm, setEditForm] = useState({
+    purchasePrice: '',
+    mrp: '',
+    supplierName: '',
+    invoiceNumber: '',
+  })
+
+  const [editError, setEditError] =
+    useState('')
+
+  const [archiving, setArchiving] =
+    useState(false)
+
+
+  // ========================================================
+  // LOAD INVENTORY
+  // ========================================================
+
+  const loadInventory = async (
+    isRefresh = false
+  ) => {
     try {
-      setLoading(true)
       setError('')
 
-  const [batchResponse, medicineResponse] = await Promise.all([
-    batchService.getAll(),
-    medicineService.getAll(),
-  ])
+      if (isRefresh) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
 
-      const batches = Array.isArray(batchResponse.data)
-        ? batchResponse.data
-        : []
+      // ----------------------------------------------------
+      // STEP 1:
+      // Get pharmacy batches
+      // ----------------------------------------------------
 
-      const medicines = Array.isArray(medicineResponse.data)
-        ? medicineResponse.data
-        : []
+      const batchResponse =
+        await batchService.getAll()
+
+      const batchData =
+        batchResponse?.data
+
+      let batches = []
+
+      if (Array.isArray(batchData)) {
+        batches = batchData
+      } else if (
+        Array.isArray(batchData?.data)
+      ) {
+        batches = batchData.data
+      } else if (
+        Array.isArray(batchData?.batches)
+      ) {
+        batches = batchData.batches
+      } else if (
+        Array.isArray(batchData?.items)
+      ) {
+        batches = batchData.items
+      }
+
+      // ----------------------------------------------------
+      // STEP 2:
+      // Remove archived batches
+      // ----------------------------------------------------
+
+      batches = batches.filter(
+        (batch) => {
+          const archived =
+            batch?.is_archived ??
+            batch?.isArchived ??
+            false
+
+          return !archived
+        }
+      )
+
+      // ----------------------------------------------------
+      // STEP 3:
+      // Extract unique medicine IDs
+      // ----------------------------------------------------
+
+      const medicineIds = [
+        ...new Set(
+          batches
+            .map(
+              (batch) =>
+                batch?.medicine_id ||
+                batch?.medicineId
+            )
+            .filter(Boolean)
+            .map(String)
+        ),
+      ]
+
+      // ----------------------------------------------------
+      // STEP 4:
+      // Fetch medicine information individually
+      //
+      // IMPORTANT:
+      // We intentionally DO NOT call:
+      //
+      // medicineService.getAll()
+      //
+      // because your current backend list route was
+      // returning 404.
+      // ----------------------------------------------------
 
       const medicineMap = new Map()
 
-      medicines.forEach((medicine) => {
-        medicineMap.set(
-          getId(medicine),
-          normalizeMedicine(medicine)
+      await Promise.all(
+        medicineIds.map(
+          async (medicineId) => {
+            try {
+              const response =
+                await medicineService.getById(
+                  medicineId
+                )
+
+              const medicineData =
+                response?.data
+
+              const medicine =
+                medicineData?.data ||
+                medicineData?.medicine ||
+                medicineData
+
+              if (medicine) {
+                medicineMap.set(
+                  String(medicineId),
+                  normalizeMedicine(
+                    medicine
+                  )
+                )
+              }
+            } catch (medicineError) {
+              console.error(
+                `Failed to load medicine ${medicineId}:`,
+                medicineError
+              )
+            }
+          }
         )
-      })
-
-      const realInventory = batches
-        .filter((batch) => !batch.is_archived)
-        .map((batch) => {
-          const medicine = medicineMap.get(batch.medicine_id)
-
-          return normalizeBatch(batch, medicine)
-        })
-
-      setInventory(realInventory)
-    } catch (err) {
-      console.error('Failed to load pharmacy inventory:', err)
-
-      setError(
-        err?.response?.data?.detail ||
-        'Unable to load inventory from the server.'
       )
 
-      setInventory([])
+      // ----------------------------------------------------
+      // STEP 5:
+      // Combine batch + medicine
+      // ----------------------------------------------------
+
+      const normalizedInventory =
+        batches
+          .map((batch) => {
+            const medicineId =
+              batch?.medicine_id ||
+              batch?.medicineId
+
+            const medicine =
+              medicineMap.get(
+                String(medicineId)
+              )
+
+            return normalizeBatch(
+              batch,
+              medicine
+            )
+          })
+          .filter(
+            (item) => item.id
+          )
+
+      setInventory(
+        normalizedInventory
+      )
+
+    } catch (requestError) {
+      console.error(
+        'Inventory loading failed:',
+        requestError
+      )
+
+      const message =
+        requestError?.response?.data
+          ?.detail ||
+        requestError?.response?.data
+          ?.message ||
+        requestError?.message ||
+        'Unable to load inventory.'
+
+      setError(message)
+
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
+
+
+  // ========================================================
+  // INITIAL LOAD
+  // ========================================================
 
   useEffect(() => {
     loadInventory()
   }, [])
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Sorting
-  // ───────────────────────────────────────────────────────────────────────────
 
-  function toggleSort(key) {
-    if (sortKey === key) {
-      setSortDir((direction) =>
-        direction === 'asc' ? 'desc' : 'asc'
-      )
-    } else {
-      setSortKey(key)
-      setSortDir('asc')
-    }
+  // ========================================================
+  // REFRESH
+  // ========================================================
 
-    setPage(1)
+  const handleRefresh = () => {
+    loadInventory(true)
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Search + filtering + sorting
-  // ───────────────────────────────────────────────────────────────────────────
 
-  const filtered = useMemo(() => {
-    let data = [...inventory]
+  // ========================================================
+  // EDIT BATCH
+  // ========================================================
 
-    if (search.trim()) {
-      const query = search.toLowerCase().trim()
+  const openEditModal = (item) => {
+    setSelectedItem(item)
+    setEditError('')
+    setEditForm({
+      purchasePrice: item?.purchasePrice ?? '',
+      mrp: item?.sellingPrice ?? item?.mrp ?? '',
+      supplierName: item?.supplier ?? '',
+      invoiceNumber: item?.invoiceNumber ?? '',
+    })
+    setShowDetailsModal(false)
+    setShowArchiveModal(false)
+    setShowEditModal(true)
+  }
 
-      data = data.filter((item) =>
-        [
-          item.name,
+  const closeEditModal = () => {
+    if (editing) return
+    setShowEditModal(false)
+    setEditError('')
+  }
+
+  const handleEditSubmit = async (event) => {
+    event.preventDefault()
+
+    if (!selectedItem?.id) return
+
+    const purchasePrice = Number(editForm.purchasePrice)
+    const mrp = Number(editForm.mrp)
+    const supplierName = editForm.supplierName.trim()
+    const invoiceNumber = editForm.invoiceNumber.trim()
+
+    if (!Number.isFinite(purchasePrice) || purchasePrice <= 0) {
+      setEditError('Purchase price must be greater than 0.')
+      return
+    }
+
+    if (!Number.isFinite(mrp) || mrp <= 0) {
+      setEditError('MRP must be greater than 0.')
+      return
+    }
+
+    if (mrp < purchasePrice) {
+      setEditError('MRP must be greater than or equal to the purchase price.')
+      return
+    }
+
+    if (supplierName.length < 2) {
+      setEditError('Supplier name must contain at least 2 characters.')
+      return
+    }
+
+    if (invoiceNumber.length < 2) {
+      setEditError('Invoice number must contain at least 2 characters.')
+      return
+    }
+
+    try {
+      setEditing(true)
+      setEditError('')
+
+      const updateData = {
+        purchase_price: purchasePrice,
+        mrp: mrp,
+        supplier_name: supplierName,
+        invoice_number: invoiceNumber,
+      }
+
+      console.log('Updating batch:', selectedItem.id)
+      console.log('Update data:', updateData)
+
+      const response = await batchService.update(
+        selectedItem.id,
+        updateData
+      )
+
+      console.log(
+        'Update response:',
+        response?.data
+      )
+
+      // Reload from the backend so the screen shows
+      // the values actually saved in MongoDB.
+      await loadInventory()
+
+      setShowEditModal(false)
+      setSelectedItem(null)
+
+    } catch (requestError) {
+      console.error('Failed to update batch:', requestError)
+
+      const message =
+        requestError?.response?.data?.detail ||
+        requestError?.response?.data?.message ||
+        requestError?.message ||
+        'Failed to update batch.'
+
+      setEditError(message)
+    } finally {
+      setEditing(false)
+    }
+  }
+
+
+  // ========================================================
+  // ARCHIVE
+  // ========================================================
+
+  const handleArchive = async () => {
+    if (!selectedItem?.id) {
+      return
+    }
+
+    try {
+      setArchiving(true)
+
+      await batchService.archive(
+        selectedItem.id
+      )
+
+      setInventory(
+        (previous) =>
+          previous.filter(
+            (item) =>
+              item.id !== selectedItem.id
+          )
+      )
+
+      setSelectedItem(null)
+      setShowArchiveModal(false)
+
+    } catch (requestError) {
+      console.error(
+        'Failed to archive batch:',
+        requestError
+      )
+
+      const message =
+        requestError?.response?.data
+          ?.detail ||
+        requestError?.message ||
+        'Failed to archive batch.'
+
+      setError(message)
+
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+
+  // ========================================================
+  // SORT
+  // ========================================================
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(
+        (previous) =>
+          previous === 'asc'
+            ? 'desc'
+            : 'asc'
+      )
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+
+  // ========================================================
+  // FILTER + SEARCH + SORT
+  // ========================================================
+
+  const filteredInventory = useMemo(() => {
+    const search =
+      searchTerm
+        .trim()
+        .toLowerCase()
+
+    let result =
+      inventory.filter((item) => {
+        // --------------------------------------------------
+        // Status filter
+        // --------------------------------------------------
+
+        if (
+          activeStatus !== 'all' &&
+          item.status !== activeStatus
+        ) {
+          return false
+        }
+
+        // --------------------------------------------------
+        // Search
+        // --------------------------------------------------
+
+        if (!search) {
+          return true
+        }
+
+        const searchableText = [
           item.genericName,
           item.janAushadhiName,
+          item.brandName,
           item.composition,
+          item.strength,
           item.manufacturer,
-          item.batch,
           item.category,
+          item.batchNumber,
         ]
+          .filter(Boolean)
           .join(' ')
           .toLowerCase()
-          .includes(query)
-      )
-    }
 
-    if (activeTab) {
-      data = data.filter(
-        (item) => item.status === activeTab
-      )
-    }
+        return searchableText.includes(
+          search
+        )
+      })
 
-    data.sort((a, b) => {
-      const first = String(
-        a[sortKey] ?? ''
-      ).toLowerCase()
+    // ------------------------------------------------------
+    // Sort
+    // ------------------------------------------------------
 
-      const second = String(
-        b[sortKey] ?? ''
-      ).toLowerCase()
+    result.sort((a, b) => {
+      let first = a?.[sortField]
+      let second = b?.[sortField]
 
-      return sortDir === 'asc'
-        ? first.localeCompare(second)
-        : second.localeCompare(first)
+      if (
+        sortField === 'expiryDate'
+      ) {
+        first =
+          parseDate(first)?.getTime() ||
+          0
+
+        second =
+          parseDate(second)?.getTime() ||
+          0
+      }
+
+      if (
+        typeof first === 'number' &&
+        typeof second === 'number'
+      ) {
+        return sortDirection === 'asc'
+          ? first - second
+          : second - first
+      }
+
+      first =
+        String(first || '')
+          .toLowerCase()
+
+      second =
+        String(second || '')
+          .toLowerCase()
+
+      if (first < second) {
+        return sortDirection === 'asc'
+          ? -1
+          : 1
+      }
+
+      if (first > second) {
+        return sortDirection === 'asc'
+          ? 1
+          : -1
+      }
+
+      return 0
     })
 
-    return data
+    return result
   }, [
     inventory,
-    search,
-    activeTab,
-    sortKey,
-    sortDir,
+    searchTerm,
+    activeStatus,
+    sortField,
+    sortDirection,
   ])
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filtered.length / PAGE_SIZE)
-  )
 
-  const paged = filtered.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE
-  )
+  // ========================================================
+  // INVENTORY STATISTICS
+  // ========================================================
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Statistics
-  // ───────────────────────────────────────────────────────────────────────────
+  const statistics = useMemo(() => {
+    const totalBatches =
+      inventory.length
 
-  const stats = useMemo(
-    () => ({
-      total: inventory.length,
+    const totalStock =
+      inventory.reduce(
+        (sum, item) =>
+          sum +
+          toNumber(
+            item.quantity
+          ),
+        0
+      )
 
-      low: inventory.filter(
+    const available =
+      inventory.filter(
+        (item) =>
+          item.status === 'available'
+      ).length
+
+    const lowStock =
+      inventory.filter(
         (item) =>
           item.status === 'low' ||
           item.status === 'critical'
-      ).length,
+      ).length
 
-      out: inventory.filter(
-        (item) => item.status === 'out'
-      ).length,
+    const outOfStock =
+      inventory.filter(
+        (item) =>
+          item.status === 'out'
+      ).length
 
-      expiring: inventory.filter(
-        (item) => item.status === 'expiring'
-      ).length,
-    }),
-    [inventory]
-  )
+    const expiring =
+      inventory.filter(
+        (item) =>
+          item.status === 'expiring'
+      ).length
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Archive real batch
-  // ───────────────────────────────────────────────────────────────────────────
-
-  async function handleArchive() {
-    if (!modal?.item?.id) return
-
-    try {
-      setArchiveLoading(true)
-
-      await batchService.archive(modal.item.id)
-
-      setInventory((previous) =>
-        previous.filter(
-          (item) => item.id !== modal.item.id
-        )
+    const inventoryValue =
+      inventory.reduce(
+        (sum, item) =>
+          sum +
+          toNumber(
+            item.quantity
+          ) *
+            toNumber(
+              item.purchasePrice
+            ),
+        0
       )
 
-      setModal(null)
-    } catch (err) {
-      console.error('Failed to archive batch:', err)
-
-      setError(
-        err?.response?.data?.detail ||
-        'Failed to archive the batch.'
-      )
-    } finally {
-      setArchiveLoading(false)
+    return {
+      totalBatches,
+      totalStock,
+      available,
+      lowStock,
+      outOfStock,
+      expiring,
+      inventoryValue,
     }
-  }
+  }, [inventory])
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Sort icon
-  // ───────────────────────────────────────────────────────────────────────────
 
-  function SortIcon({ column }) {
-    if (sortKey !== column) {
-      return (
-        <HiOutlineChevronDown
-          size={11}
-          className="text-slate-300"
-        />
-      )
-    }
+  // ========================================================
+  // STATUS TABS
+  // ========================================================
 
-    return sortDir === 'asc' ? (
-      <HiOutlineChevronUp
-        size={11}
-        className="text-primary-500"
-      />
-    ) : (
-      <HiOutlineChevronDown
-        size={11}
-        className="text-primary-500"
-      />
+  const statusTabs = [
+    {
+      key: 'all',
+      label: 'All',
+      count: inventory.length,
+    },
+
+    {
+      key: 'available',
+      label: 'Available',
+      count: statistics.available,
+    },
+
+    {
+      key: 'low',
+      label: 'Low Stock',
+      count: inventory.filter(
+        (item) =>
+          item.status === 'low'
+      ).length,
+    },
+
+    {
+      key: 'critical',
+      label: 'Critical',
+      count: inventory.filter(
+        (item) =>
+          item.status === 'critical'
+      ).length,
+    },
+
+    {
+      key: 'out',
+      label: 'Out of Stock',
+      count: statistics.outOfStock,
+    },
+
+    {
+      key: 'expiring',
+      label: 'Expiring',
+      count: statistics.expiring,
+    },
+  ]
+
+
+  // ========================================================
+  // STATUS BADGE
+  // ========================================================
+
+  const renderStatus = (status) => {
+    const config =
+      STATUS_CONFIG[status] ||
+      STATUS_CONFIG.available
+
+    return (
+      <span
+        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+          config.className || ''
+        }`}
+      >
+        {config.label}
+      </span>
     )
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Loading
-  // ───────────────────────────────────────────────────────────────────────────
+
+  // ========================================================
+  // SORT ICON
+  // ========================================================
+
+  const renderSortIcon = (field) => {
+    if (sortField !== field) {
+      return null
+    }
+
+    return sortDirection === 'asc' ? (
+      <HiOutlineChevronUp className="h-4 w-4" />
+    ) : (
+      <HiOutlineChevronDown className="h-4 w-4" />
+    )
+  }
+
+
+  // ========================================================
+  // LOADING
+  // ========================================================
 
   if (loading) {
     return (
-      <article
-        aria-label="Inventory Management"
-        className="flex flex-col gap-5"
-      >
-        <div>
-          <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-            <MdInventory2
-              size={22}
-              className="text-secondary-600"
-            />
-            Inventory Management
-          </h1>
+      <div className="flex min-h-[500px] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <HiOutlineArrowPath className="h-8 w-8 animate-spin text-blue-600" />
 
-          <p className="text-xs text-slate-500 mt-0.5">
-            Manage medicines, stock levels, batches and expiry information.
+          <p className="text-sm text-gray-500">
+            Loading inventory...
           </p>
         </div>
-
-        <div className="flex items-center justify-center py-20 bg-white rounded-2xl border border-slate-100">
-          <div className="flex flex-col items-center gap-3">
-            <HiOutlineArrowPath
-              size={28}
-              className="text-primary-500 animate-spin"
-            />
-
-            <p className="text-sm text-slate-500">
-              Loading your inventory...
-            </p>
-          </div>
-        </div>
-      </article>
+      </div>
     )
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Render
-  // ───────────────────────────────────────────────────────────────────────────
+
+  // ========================================================
+  // RENDER
+  // ========================================================
 
   return (
-    <article
-      aria-label="Inventory Management"
-      className="flex flex-col gap-5"
-    >
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="space-y-6 p-4 md:p-6">
+
+      {/* ================================================== */}
+      {/* HEADER */}
+      {/* ================================================== */}
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-            <MdInventory2
-              size={22}
-              className="text-secondary-600"
-            />
-            Inventory Management
-          </h1>
+          <div className="flex items-center gap-3">
 
-          <p className="text-xs text-slate-500 mt-0.5">
-            Manage medicines, stock levels, batches and expiry information.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            to={ROUTES.PHARMACY.INVENTORY_ADD}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-secondary-600 text-white text-sm font-semibold hover:bg-secondary-700 transition-colors"
-          >
-            <HiOutlinePlus size={15} />
-            Add Medicine
-          </Link>
-
-          <button
-            type="button"
-            onClick={loadInventory}
-            className="flex items-center gap-1 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50"
-          >
-            <HiOutlineArrowPath size={14} />
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-danger-50 border border-danger-200">
-          <HiOutlineExclamationTriangle
-            size={20}
-            className="text-danger-600 shrink-0"
-          />
-
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-danger-700">
-              Unable to load inventory
-            </p>
-
-            <p className="text-xs text-danger-600 mt-1">
-              {error}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={loadInventory}
-            className="text-xs font-semibold text-danger-700 underline"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          {
-            label: 'Total Medicines',
-            value: stats.total,
-            icon: HiOutlineArchiveBox,
-            color: 'text-primary-600',
-            bg: 'bg-primary-50',
-          },
-          {
-            label: 'Low Stock',
-            value: stats.low,
-            icon: HiOutlineExclamationTriangle,
-            color: 'text-warning-600',
-            bg: 'bg-warning-50',
-          },
-          {
-            label: 'Out of Stock',
-            value: stats.out,
-            icon: HiOutlineExclamationTriangle,
-            color: 'text-danger-600',
-            bg: 'bg-danger-50',
-          },
-          {
-            label: 'Near Expiry',
-            value: stats.expiring,
-            icon: HiOutlineClock,
-            color: 'text-orange-600',
-            bg: 'bg-orange-50',
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="flex items-center gap-3 p-4 rounded-xl bg-white border border-slate-100 shadow-sm"
-          >
-            <div
-              className={`flex items-center justify-center w-10 h-10 rounded-xl ${stat.bg}`}
-            >
-              <stat.icon
-                size={20}
-                className={stat.color}
-              />
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
+              <MdInventory2 className="h-6 w-6 text-blue-600" />
             </div>
 
             <div>
-              <p className="text-xl font-extrabold text-slate-900">
-                {stat.value}
-              </p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Inventory
+              </h1>
 
-              <p className="text-xs text-slate-500">
-                {stat.label}
+              <p className="text-sm text-gray-500">
+                Manage your pharmacy medicines and stock.
               </p>
             </div>
+
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Search */}
-      <div className="relative">
-        <HiOutlineMagnifyingGlass
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-        />
 
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value)
-            setPage(1)
-          }}
-          placeholder="Search your medicines..."
-          className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
-        />
-      </div>
+        <div className="flex flex-wrap items-center gap-2">
 
-      {/* Status tabs */}
-      <div
-        className="flex gap-1 flex-wrap"
-        role="group"
-        aria-label="Filter by stock status"
-      >
-        {STATUS_TABS.map((tab) => (
           <button
-            key={tab.value}
             type="button"
-            onClick={() => {
-              setActiveTab(tab.value)
-              setPage(1)
-            }}
-            className={[
-              'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-              activeTab === tab.value
-                ? 'bg-primary-600 text-white'
-                : 'bg-white border border-slate-200 text-slate-600 hover:border-primary-300',
-            ].join(' ')}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {tab.label}
-
-            {tab.value && (
-              <span className="ml-1.5 opacity-70">
-                (
-                {
-                  inventory.filter(
-                    (item) =>
-                      item.status === tab.value
-                  ).length
-                }
-                )
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Empty state */}
-      {inventory.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100">
-            <MdInventory2
-              size={32}
-              className="text-slate-300"
+            <HiOutlineArrowPath
+              className={`h-5 w-5 ${
+                refreshing
+                  ? 'animate-spin'
+                  : ''
+              }`}
             />
-          </div>
 
-          <div className="text-center">
-            <p className="text-base font-bold text-slate-700">
-              No medicines in inventory
-            </p>
+            Refresh
+          </button>
 
-            <p className="text-sm text-slate-400 mt-1">
-              Add a medicine and batch to start managing your inventory.
-            </p>
-          </div>
 
           <Link
-            to={ROUTES.PHARMACY.INVENTORY_ADD}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-secondary-600 text-white text-sm font-semibold hover:bg-secondary-700"
+            to={ROUTES.PHARMACY_ADD_MEDICINE}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
-            <HiOutlinePlus size={16} />
+            <HiOutlinePlus className="h-5 w-5" />
+
             Add Medicine
           </Link>
+
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-slate-100">
-          <p className="text-sm font-semibold text-slate-600">
-            No medicines match your search or filter.
-          </p>
+
+      </div>
+
+
+      {/* ================================================== */}
+      {/* ERROR */}
+      {/* ================================================== */}
+
+      {error && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
+
+          <HiOutlineExclamationTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+
+          <div className="flex-1">
+
+            <p className="font-semibold text-red-800">
+              Unable to load inventory
+            </p>
+
+            <p className="mt-1 text-sm text-red-700">
+              {error}
+            </p>
+
+          </div>
 
           <button
             type="button"
-            onClick={() => {
-              setSearch('')
-              setActiveTab('')
-              setPage(1)
-            }}
-            className="mt-2 text-xs text-primary-600 font-semibold"
+            onClick={() => setError('')}
+            className="text-red-500 hover:text-red-700"
           >
-            Clear filters
+            <HiOutlineXMark className="h-5 w-5" />
           </button>
+
         </div>
-      ) : (
-        <>
-          {/* Desktop table */}
-          <div className="hidden sm:block bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table
-                className="table-base"
-                aria-label="Medicine inventory"
-              >
-                <thead>
-                  <tr>
-                    {[
-                      { key: 'name', label: 'Medicine' },
-                      { key: 'genericName', label: 'Generic' },
-                      { key: 'batch', label: 'Batch' },
-                      { key: 'expiry', label: 'Expiry' },
-                      { key: 'qty', label: 'Stock' },
-                      { key: 'status', label: 'Status' },
-                      { key: 'lastUpdated', label: 'Updated' },
-                      { key: '_actions', label: 'Actions' },
-                    ].map((column) => (
-                      <th
-                        key={column.key}
-                        scope="col"
-                        onClick={
-                          column.key !== '_actions'
-                            ? () => toggleSort(column.key)
-                            : undefined
-                        }
-                        style={
-                          column.key !== '_actions'
-                            ? { cursor: 'pointer' }
-                            : {}
-                        }
-                      >
-                        <span className="flex items-center gap-1">
-                          {column.label}
+      )}
 
-                          {column.key !== '_actions' && (
-                            <SortIcon column={column.key} />
-                          )}
-                        </span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
 
-                <tbody>
-                  {paged.map((item) => {
-                    const config =
-                      STATUS_CONFIG[item.status]
+      {/* ================================================== */}
+      {/* STATISTICS */}
+      {/* ================================================== */}
 
-                    return (
-                      <tr key={item.id}>
-                        <td>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-secondary-50">
-                              <MdMedication
-                                size={14}
-                                className="text-secondary-600"
-                              />
-                            </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
-                            <div>
-                              <p className="text-xs font-semibold text-slate-900">
-                                {item.name}
-                              </p>
+        {/* Total Batches */}
 
-                              <p className="text-[10px] text-slate-400">
-                                {item.composition}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 
-                        <td className="text-xs text-slate-500">
-                          {item.genericName}
-                        </td>
+          <div className="flex items-center justify-between">
 
-                        <td className="text-xs text-slate-400 font-mono">
-                          {item.batch}
-                        </td>
-
-                        <td
-                          className={`text-xs ${
-                            item.status === 'expiring'
-                              ? 'text-orange-600 font-semibold'
-                              : 'text-slate-500'
-                          }`}
-                        >
-                          {item.expiry}
-                        </td>
-
-                        <td className="text-xs font-bold text-slate-900">
-                          {item.qty}
-                        </td>
-
-                        <td>
-                          <Badge
-                            variant={config.variant}
-                            size="sm"
-                            dot
-                          >
-                            {config.label}
-                          </Badge>
-                        </td>
-
-                        <td className="text-[11px] text-slate-400">
-                          {item.lastUpdated}
-                        </td>
-
-                        <td>
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setModal({
-                                  type: 'view',
-                                  item,
-                                })
-                              }
-                              title="View Details"
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50"
-                            >
-                              <HiOutlineEye size={14} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setModal({
-                                  type: 'archive',
-                                  item,
-                                })
-                              }
-                              title="Archive Batch"
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-danger-600 hover:bg-danger-50"
-                            >
-                              <HiOutlineTrash size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50">
-              <p className="text-xs text-slate-500">
-                Showing{' '}
-                {filtered.length === 0
-                  ? 0
-                  : (page - 1) * PAGE_SIZE + 1}
-                –
-                {Math.min(
-                  page * PAGE_SIZE,
-                  filtered.length
-                )}{' '}
-                of {filtered.length}
+            <div>
+              <p className="text-sm font-medium text-gray-500">
+                Total Batches
               </p>
 
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPage((p) => Math.max(1, p - 1))
-                  }
-                  disabled={page === 1}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs disabled:opacity-40"
-                >
-                  ← Prev
-                </button>
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {statistics.totalBatches}
+              </p>
+            </div>
 
-                {Array.from({
-                  length: totalPages,
-                }).map((_, index) => (
+            <div className="rounded-lg bg-blue-100 p-3">
+              <HiOutlineCube className="h-6 w-6 text-blue-600" />
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {/* Total Stock */}
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-sm font-medium text-gray-500">
+                Total Stock Units
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {statistics.totalStock.toLocaleString('en-IN')}
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-green-100 p-3">
+              <HiOutlineCube className="h-6 w-6 text-green-600" />
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {/* Low Stock */}
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-sm font-medium text-gray-500">
+                Low / Critical
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {statistics.lowStock}
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-yellow-100 p-3">
+              <HiOutlineExclamationTriangle className="h-6 w-6 text-yellow-600" />
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {/* Inventory Value */}
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-sm font-medium text-gray-500">
+                Inventory Value
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {formatCurrency(
+                  statistics.inventoryValue
+                )}
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-purple-100 p-3">
+              <HiOutlineCurrencyRupee className="h-6 w-6 text-purple-600" />
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* ================================================== */}
+      {/* STATUS FILTERS */}
+      {/* ================================================== */}
+
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+
+        <div className="flex min-w-max border-b border-gray-200">
+
+          {statusTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() =>
+                setActiveStatus(tab.key)
+              }
+              className={`border-b-2 px-5 py-4 text-sm font-medium transition ${
+                activeStatus === tab.key
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <span>
+                {tab.label}
+              </span>
+
+              <span
+                className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
+                  activeStatus === tab.key
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          ))}
+
+        </div>
+
+      </div>
+
+
+      {/* ================================================== */}
+      {/* SEARCH */}
+      {/* ================================================== */}
+
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+
+        <div className="relative">
+
+          <HiOutlineMagnifyingGlass className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(event) =>
+              setSearchTerm(
+                event.target.value
+              )
+            }
+            placeholder="Search medicine, brand, batch, manufacturer..."
+            className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() =>
+                setSearchTerm('')
+              }
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <HiOutlineXMark className="h-5 w-5" />
+            </button>
+          )}
+
+        </div>
+
+      </div>
+
+
+      {/* ================================================== */}
+      {/* TABLE */}
+      {/* ================================================== */}
+
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+
+        <div className="hidden overflow-x-auto lg:block">
+
+          <table className="min-w-full divide-y divide-gray-200">
+
+            <thead className="bg-gray-50">
+
+              <tr>
+
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-left"
+                >
                   <button
-                    key={index}
                     type="button"
                     onClick={() =>
-                      setPage(index + 1)
+                      handleSort(
+                        'genericName'
+                      )
                     }
-                    className={`w-8 h-7 rounded-lg text-xs ${
-                      page === index + 1
-                        ? 'bg-primary-600 text-white'
-                        : 'border border-slate-200 text-slate-600'
-                    }`}
+                    className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-gray-800"
                   >
-                    {index + 1}
+                    Medicine
+
+                    {renderSortIcon(
+                      'genericName'
+                    )}
                   </button>
-                ))}
+                </th>
+
+
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-left"
+                >
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Batch
+                  </span>
+                </th>
+
+
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-left"
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSort(
+                        'quantity'
+                      )
+                    }
+                    className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-gray-800"
+                  >
+                    Quantity
+
+                    {renderSortIcon(
+                      'quantity'
+                    )}
+                  </button>
+                </th>
+
+
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-left"
+                >
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Price
+                  </span>
+                </th>
+
+
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-left"
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSort(
+                        'expiryDate'
+                      )
+                    }
+                    className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-gray-800"
+                  >
+                    Expiry
+
+                    {renderSortIcon(
+                      'expiryDate'
+                    )}
+                  </button>
+                </th>
+
+
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-left"
+                >
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Status
+                  </span>
+                </th>
+
+
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-right"
+                >
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Actions
+                  </span>
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody className="divide-y divide-gray-200">
+
+              {filteredInventory.length === 0 ? (
+
+                <tr>
+
+                  <td
+                    colSpan={7}
+                    className="px-6 py-16 text-center"
+                  >
+
+                    <MdInventory2 className="mx-auto h-12 w-12 text-gray-300" />
+
+                    <p className="mt-3 text-sm font-medium text-gray-700">
+                      No inventory found
+                    </p>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                      Try changing your search or filter.
+                    </p>
+
+                  </td>
+
+                </tr>
+
+              ) : (
+
+                filteredInventory.map(
+                  (item) => (
+                    <tr
+                      key={item.id}
+                      className="transition hover:bg-gray-50"
+                    >
+
+                      {/* Medicine */}
+
+                      <td className="px-5 py-4">
+
+                        <div>
+
+                          <p className="font-semibold text-gray-900">
+                            {item.genericName}
+                          </p>
+
+                          <p className="mt-1 text-xs text-gray-500">
+                            {item.brandName}
+                            {item.strength &&
+                              item.strength !==
+                                '—'
+                              ? ` • ${item.strength}`
+                              : ''}
+                          </p>
+
+                          <p className="mt-1 text-xs text-gray-400">
+                            {item.manufacturer}
+                          </p>
+
+                        </div>
+
+                      </td>
+
+
+                      {/* Batch */}
+
+                      <td className="px-5 py-4">
+
+                        <p className="text-sm font-medium text-gray-800">
+                          {item.batchNumber}
+                        </p>
+
+                        <p className="mt-1 text-xs text-gray-500">
+                          {item.category}
+                        </p>
+
+                      </td>
+
+
+                      {/* Quantity */}
+
+                      <td className="px-5 py-4">
+
+                        <p className="text-sm font-semibold text-gray-900">
+                          {item.quantity.toLocaleString(
+                            'en-IN'
+                          )}
+                        </p>
+
+                        {item.minimumStock >
+                          0 && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            Min: {item.minimumStock}
+                          </p>
+                        )}
+
+                      </td>
+
+
+                      {/* Price */}
+
+                      <td className="px-5 py-4">
+
+                        <p className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(
+                            item.sellingPrice
+                          )}
+                        </p>
+
+                        <p className="mt-1 text-xs text-gray-500">
+                          Buy:{' '}
+                          {formatCurrency(
+                            item.purchasePrice
+                          )}
+                        </p>
+
+                      </td>
+
+
+                      {/* Expiry */}
+
+                      <td className="px-5 py-4">
+
+                        <p className="text-sm text-gray-800">
+                          {formatDate(
+                            item.expiryDate
+                          )}
+                        </p>
+
+                        {(() => {
+                          const days =
+                            getDaysUntilExpiry(
+                              item.expiryDate
+                            )
+
+                          if (
+                            days === null
+                          ) {
+                            return null
+                          }
+
+                          return (
+                            <p
+                              className={`mt-1 text-xs ${
+                                days <= 30
+                                  ? 'font-semibold text-red-600'
+                                  : days <= 90
+                                    ? 'text-yellow-600'
+                                    : 'text-gray-500'
+                              }`}
+                            >
+                              {days < 0
+                                ? 'Expired'
+                                : `${days} days left`}
+                            </p>
+                          )
+                        })()}
+
+                      </td>
+
+
+                      {/* Status */}
+
+                      <td className="px-5 py-4">
+                        {renderStatus(
+                          item.status
+                        )}
+                      </td>
+
+
+                      {/* Actions */}
+
+                      <td className="px-5 py-4">
+
+                        <div className="flex justify-end gap-2">
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedItem(
+                                item
+                              )
+
+                              setShowDetailsModal(
+                                true
+                              )
+                            }}
+                            className="rounded-lg p-2 text-gray-500 transition hover:bg-blue-50 hover:text-blue-600"
+                            title="View details"
+                          >
+                            <HiOutlineEye className="h-5 w-5" />
+                          </button>
+
+
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(item)}
+                            className="rounded-lg p-2 text-gray-500 transition hover:bg-yellow-50 hover:text-yellow-600"
+                            title="Edit batch"
+                          >
+                            <HiOutlinePencilSquare className="h-5 w-5" />
+                          </button>
+
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedItem(
+                                item
+                              )
+
+                              setShowArchiveModal(
+                                true
+                              )
+                            }}
+                            className="rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-600"
+                            title="Archive batch"
+                          >
+                            <HiOutlineArchiveBox className="h-5 w-5" />
+                          </button>
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+                  )
+                )
+
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+
+        {/* ================================================= */}
+        {/* MOBILE CARDS */}
+        {/* ================================================= */}
+
+        <div className="divide-y divide-gray-200 lg:hidden">
+
+          {filteredInventory.length === 0 ? (
+
+            <div className="px-6 py-16 text-center">
+
+              <MdInventory2 className="mx-auto h-12 w-12 text-gray-300" />
+
+              <p className="mt-3 text-sm font-medium text-gray-700">
+                No inventory found
+              </p>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Try changing your search or filter.
+              </p>
+
+            </div>
+
+          ) : (
+
+            filteredInventory.map(
+              (item) => (
+                <div
+                  key={item.id}
+                  className="p-4"
+                >
+
+                  <div className="flex items-start justify-between gap-3">
+
+                    <div className="min-w-0">
+
+                      <p className="truncate font-semibold text-gray-900">
+                        {item.genericName}
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-500">
+                        {item.brandName}
+                        {item.strength &&
+                          item.strength !==
+                            '—'
+                          ? ` • ${item.strength}`
+                          : ''}
+                      </p>
+
+                    </div>
+
+                    {renderStatus(
+                      item.status
+                    )}
+
+                  </div>
+
+
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+
+                    <div className="rounded-lg bg-gray-50 p-3">
+
+                      <p className="text-xs text-gray-500">
+                        Batch
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold text-gray-900">
+                        {item.batchNumber}
+                      </p>
+
+                    </div>
+
+
+                    <div className="rounded-lg bg-gray-50 p-3">
+
+                      <p className="text-xs text-gray-500">
+                        Quantity
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold text-gray-900">
+                        {item.quantity.toLocaleString(
+                          'en-IN'
+                        )}
+                      </p>
+
+                    </div>
+
+
+                    <div className="rounded-lg bg-gray-50 p-3">
+
+                      <p className="text-xs text-gray-500">
+                        Selling Price
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold text-gray-900">
+                        {formatCurrency(
+                          item.sellingPrice
+                        )}
+                      </p>
+
+                    </div>
+
+
+                    <div className="rounded-lg bg-gray-50 p-3">
+
+                      <p className="text-xs text-gray-500">
+                        Expiry
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold text-gray-900">
+                        {formatDate(
+                          item.expiryDate
+                        )}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+
+                  <div className="mt-4 flex justify-end gap-2">
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedItem(
+                          item
+                        )
+
+                        setShowDetailsModal(
+                          true
+                        )
+                      }}
+                      className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      <HiOutlineEye className="h-4 w-4" />
+
+                      View
+                    </button>
+
+
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(item)}
+                      className="inline-flex items-center gap-2 rounded-lg border border-yellow-200 px-3 py-2 text-sm font-medium text-yellow-700 hover:bg-yellow-50"
+                    >
+                      <HiOutlinePencilSquare className="h-4 w-4" />
+
+                      Edit
+                    </button>
+
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedItem(
+                          item
+                        )
+
+                        setShowArchiveModal(
+                          true
+                        )
+                      }}
+                      className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                    >
+                      <HiOutlineArchiveBox className="h-4 w-4" />
+
+                      Archive
+                    </button>
+
+                  </div>
+
+                </div>
+              )
+            )
+
+          )}
+
+        </div>
+
+      </div>
+
+
+      {/* ================================================== */}
+      {/* RESULT COUNT */}
+      {/* ================================================== */}
+
+      <div className="text-sm text-gray-500">
+
+        Showing{' '}
+
+        <span className="font-semibold text-gray-700">
+          {filteredInventory.length}
+        </span>{' '}
+
+        of{' '}
+
+        <span className="font-semibold text-gray-700">
+          {inventory.length}
+        </span>{' '}
+
+        inventory batches
+
+      </div>
+
+
+      {/* ================================================== */}
+      {/* DETAILS MODAL */}
+      {/* ================================================== */}
+
+      {showDetailsModal &&
+        selectedItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+
+              {/* Header */}
+
+              <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Medicine Details
+                  </h2>
+
+                  <p className="text-sm text-gray-500">
+                    {selectedItem.genericName}
+                  </p>
+                </div>
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((p) =>
-                      Math.min(totalPages, p + 1)
+                  onClick={() => {
+                    setShowDetailsModal(
+                      false
                     )
-                  }
-                  disabled={page === totalPages}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs disabled:opacity-40"
+
+                    setSelectedItem(null)
+                  }}
+                  className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                 >
-                  Next →
+                  <HiOutlineXMark className="h-6 w-6" />
+                </button>
+
+              </div>
+
+
+              {/* Body */}
+
+              <div className="space-y-6 p-6">
+
+                {/* Status */}
+
+                <div className="flex items-center justify-between rounded-xl bg-gray-50 p-4">
+
+                  <div>
+
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Current Status
+                    </p>
+
+                    <div className="mt-2">
+                      {renderStatus(
+                        selectedItem.status
+                      )}
+                    </div>
+
+                  </div>
+
+                  <div className="text-right">
+
+                    <p className="text-xs text-gray-500">
+                      Quantity
+                    </p>
+
+                    <p className="text-2xl font-bold text-gray-900">
+                      {selectedItem.quantity.toLocaleString(
+                        'en-IN'
+                      )}
+                    </p>
+
+                  </div>
+
+                </div>
+
+
+                {/* Medicine information */}
+
+                <div>
+
+                  <h3 className="mb-3 text-sm font-bold text-gray-900">
+                    Medicine Information
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Generic Name
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-gray-900">
+                        {selectedItem.genericName}
+                      </p>
+                    </div>
+
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Jan Aushadhi Name
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-gray-900">
+                        {selectedItem.janAushadhiName}
+                      </p>
+                    </div>
+
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Brand
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-gray-900">
+                        {selectedItem.brandName}
+                      </p>
+                    </div>
+
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Strength
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-gray-900">
+                        {selectedItem.strength}
+                      </p>
+                    </div>
+
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Composition
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-gray-900">
+                        {selectedItem.composition}
+                      </p>
+                    </div>
+
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Manufacturer
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-gray-900">
+                        {selectedItem.manufacturer}
+                      </p>
+                    </div>
+
+                  </div>
+
+                </div>
+
+
+                {/* Batch information */}
+
+                <div>
+
+                  <h3 className="mb-3 text-sm font-bold text-gray-900">
+                    Batch Information
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Batch Number
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-gray-900">
+                        {selectedItem.batchNumber}
+                      </p>
+                    </div>
+
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Expiry Date
+                      </p>
+
+                      <p className="mt-1 flex items-center gap-2 text-sm font-medium text-gray-900">
+                        <HiOutlineCalendarDays className="h-4 w-4 text-gray-400" />
+
+                        {formatDate(
+                          selectedItem.expiryDate
+                        )}
+                      </p>
+                    </div>
+
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Purchase Price
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-gray-900">
+                        {formatCurrency(
+                          selectedItem.purchasePrice
+                        )}
+                      </p>
+                    </div>
+
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Selling Price
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-gray-900">
+                        {formatCurrency(
+                          selectedItem.sellingPrice
+                        )}
+                      </p>
+                    </div>
+
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Minimum Stock
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-gray-900">
+                        {selectedItem.minimumStock}
+                      </p>
+                    </div>
+
+
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        Supplier
+                      </p>
+
+                      <p className="mt-1 flex items-center gap-2 text-sm font-medium text-gray-900">
+                        <HiOutlineBuildingStorefront className="h-4 w-4 text-gray-400" />
+
+                        {selectedItem.supplier}
+                      </p>
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* Footer */}
+
+              <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDetailsModal(
+                      false
+                    )
+
+                    setSelectedItem(null)
+                  }}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Close
+                </button>
+
+
+                <button
+                  type="button"
+                  onClick={() => openEditModal(selectedItem)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-yellow-300 px-4 py-2 text-sm font-semibold text-yellow-700 hover:bg-yellow-50"
+                >
+                  <HiOutlinePencilSquare className="h-5 w-5" />
+
+                  Edit Batch
+                </button>
+
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDetailsModal(
+                      false
+                    )
+
+                    setShowArchiveModal(
+                      true
+                    )
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  <HiOutlineArchiveBox className="h-5 w-5" />
+
+                  Archive Batch
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+
+      {/* ================================================== */}
+      {/* EDIT BATCH MODAL */}
+      {/* ================================================== */}
+
+      {showEditModal && selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
+
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Edit Batch
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {selectedItem.genericName} • {selectedItem.batchNumber}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditModal}
+                disabled={editing}
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+              >
+                <HiOutlineXMark className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit}>
+              <div className="space-y-5 p-6">
+
+                {editError && (
+                  <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3">
+                    <HiOutlineExclamationTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                    <p className="text-sm text-red-700">{editError}</p>
+                  </div>
+                )}
+
+                <div className="rounded-xl bg-blue-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <HiOutlineInformationCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                    <p className="text-xs leading-5 text-blue-800">
+                      You can edit pricing and supplier information here. Quantity, batch number, medicine, manufacturing date, and expiry date are not editable from this screen. Stock changes will be handled through Stock Adjustment.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                      Purchase Price <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <HiOutlineCurrencyRupee className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={editForm.purchasePrice}
+                        onChange={(event) => setEditForm((previous) => ({ ...previous, purchasePrice: event.target.value }))}
+                        disabled={editing}
+                        className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                      MRP <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <HiOutlineCurrencyRupee className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={editForm.mrp}
+                        onChange={(event) => setEditForm((previous) => ({ ...previous, mrp: event.target.value }))}
+                        disabled={editing}
+                        className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Supplier Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    minLength={2}
+                    maxLength={150}
+                    value={editForm.supplierName}
+                    onChange={(event) => setEditForm((previous) => ({ ...previous, supplierName: event.target.value }))}
+                    disabled={editing}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Invoice Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    minLength={2}
+                    maxLength={100}
+                    value={editForm.invoiceNumber}
+                    onChange={(event) => setEditForm((previous) => ({ ...previous, invoiceNumber: event.target.value }))}
+                    disabled={editing}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  disabled={editing}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={editing}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {editing ? (
+                    <HiOutlineArrowPath className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <HiOutlineCheck className="h-4 w-4" />
+                  )}
+                  {editing ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* ================================================== */}
+      {/* ARCHIVE CONFIRMATION MODAL */}
+      {/* ================================================== */}
+
+      {showArchiveModal &&
+        selectedItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+
+            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+
+              <div className="p-6">
+
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+
+                  <HiOutlineTrash className="h-6 w-6 text-red-600" />
+
+                </div>
+
+
+                <h2 className="mt-4 text-center text-lg font-bold text-gray-900">
+                  Archive Batch?
+                </h2>
+
+
+                <p className="mt-2 text-center text-sm leading-6 text-gray-500">
+
+                  Are you sure you want to archive batch{' '}
+
+                  <span className="font-semibold text-gray-700">
+                    {selectedItem.batchNumber}
+                  </span>{' '}
+                  of{' '}
+                  <span className="font-semibold text-gray-700">
+                    {selectedItem.genericName}
+                  </span>
+                  ?
+                </p>
+                <p className="mt-3 text-center text-xs text-gray-400">
+                  Archived batches will no longer appear in the active inventory.
+                </p>
+              </div>
+              <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+                <button
+                  type="button"
+                  disabled={archiving}
+                  onClick={() => {
+                    setShowArchiveModal(
+                      false
+                    )
+
+                    setSelectedItem(null)
+                  }}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={archiving}
+                  onClick={handleArchive}
+                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {archiving && (
+                    <HiOutlineArrowPath className="h-4 w-4 animate-spin" />
+                  )}
+
+                  {archiving
+                    ? 'Archiving...'
+                    : 'Archive Batch'}
                 </button>
               </div>
             </div>
           </div>
-
-          {/* Mobile */}
-          <div className="sm:hidden flex flex-col gap-3">
-            {paged.map((item) => (
-              <MobileCard
-                key={item.id}
-                item={item}
-                onView={(selected) =>
-                  setModal({
-                    type: 'view',
-                    item: selected,
-                  })
-                }
-                onArchive={(selected) =>
-                  setModal({
-                    type: 'archive',
-                    item: selected,
-                  })
-                }
-              />
-            ))}
-
-            <div className="flex justify-center gap-2 py-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setPage((p) => Math.max(1, p - 1))
-                }
-                disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg border text-xs disabled:opacity-40"
-              >
-                ← Prev
-              </button>
-
-              <span className="flex items-center text-xs text-slate-500">
-                {page} / {totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setPage((p) =>
-                    Math.min(totalPages, p + 1)
-                  )
-                }
-                disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg border text-xs disabled:opacity-40"
-              >
-                Next →
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Modals */}
-      {modal?.type === 'view' && (
-        <ViewDetailsModal
-          item={modal.item}
-          onClose={() => setModal(null)}
-        />
-      )}
-
-      {modal?.type === 'archive' && (
-        <ArchiveDialog
-          item={modal.item}
-          loading={archiveLoading}
-          onConfirm={handleArchive}
-          onClose={() => setModal(null)}
-        />
-      )}
-    </article>
+        )}
+    </div>
   )
 }
 export default InventoryPage

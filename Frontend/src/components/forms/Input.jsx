@@ -1,26 +1,5 @@
-/**
- * Input Component
- *
- * Purpose : Reusable text / email / number input that integrates with
- *           React Hook Form via the `ref` forwarding pattern.
- * Location : src/components/forms/Input.jsx
- *
- * Types    : text | email | number | tel | url | search | date
- * Features : left/right icon slots, label, helper text, error state,
- *            disabled state, required indicator
- *
- * Future usage: Medicine search field, login email, register fields,
- *               inventory quantity inputs, admin filters.
- *
- * React Hook Form usage:
- *   const { register, formState: { errors } } = useForm()
- *   <Input label="Email" error={errors.email?.message}
- *          {...register('email')} />
- */
-
 import { forwardRef, useId } from 'react'
 import FormField from './FormField'
-
 const Input = forwardRef(function Input(
   {
     label,
@@ -40,17 +19,38 @@ const Input = forwardRef(function Input(
 ) {
   const autoId = useId()
   const id = idProp || autoId
-
   const inputClasses = [
-    'input-base',
-    error ? 'input-error' : '',
-    leftIcon ? 'pl-9' : '',
-    rightIcon ? 'pr-9' : '',
+    // Base appearance
+    'w-full',
+    'h-11',
+    'rounded-xl',
+    'border',
+    'bg-white',
+    // IMPORTANT: visible text
+    'text-slate-900',
+    'placeholder:text-slate-400',
+    // Border
+    error
+      ? 'border-danger-500'
+      : 'border-slate-300',
+    // Spacing
+    leftIcon ? 'pl-10' : 'pl-3',
+    rightIcon ? 'pr-10' : 'pr-3',
+    // Focus
+    'outline-none',
+    'transition-all',
+    'focus:border-primary-500',
+    'focus:ring-2',
+    'focus:ring-primary-500/20',
+    // Disabled
+    disabled
+      ? 'bg-slate-100 text-slate-500 cursor-not-allowed opacity-70'
+      : '',
+
     className,
   ]
     .filter(Boolean)
     .join(' ')
-
   return (
     <FormField
       label={label}
@@ -60,12 +60,23 @@ const Input = forwardRef(function Input(
       error={error}
     >
       <div className="relative">
+        {/* Left icon */}
         {leftIcon && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none">
+          <span
+            className="
+              absolute
+              left-3
+              top-1/2
+              -translate-y-1/2
+              text-slate-500
+              pointer-events-none
+              z-10
+            "
+          >
             {leftIcon}
           </span>
         )}
-
+        {/* Input */}
         <input
           ref={ref}
           id={id}
@@ -74,13 +85,29 @@ const Input = forwardRef(function Input(
           disabled={disabled}
           required={required}
           aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : helperText ? `${id}-helper` : undefined}
+          aria-describedby={
+            error
+              ? `${id}-error`
+              : helperText
+                ? `${id}-helper`
+                : undefined
+          }
           className={inputClasses}
           {...rest}
         />
-
+        {/* Right icon */}
         {rightIcon && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+          <span
+            className="
+              absolute
+              right-3
+              top-1/2
+              -translate-y-1/2
+              text-slate-500
+              pointer-events-none
+              z-10
+            "
+          >
             {rightIcon}
           </span>
         )}
@@ -88,5 +115,4 @@ const Input = forwardRef(function Input(
     </FormField>
   )
 })
-
 export default Input

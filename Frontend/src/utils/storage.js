@@ -1,34 +1,37 @@
 export const storage = {
   get(key) {
     try {
-      const item = sessionStorage.getItem(key)
+      const item = localStorage.getItem(key)
       return item ? JSON.parse(item) : null
-    } catch {
+    } catch (error) {
+      console.error('Storage GET error:', error)
       return null
     }
   },
 
   set(key, value) {
     try {
-      sessionStorage.setItem(key, JSON.stringify(value))
-    } catch {
-      // Storage unavailable — silently ignore
+      localStorage.setItem(key, JSON.stringify(value))
+    } catch (error) {
+      console.error('Storage SET error:', error)
     }
   },
 
   remove(key) {
     try {
-      sessionStorage.removeItem(key)
-    } catch {
-      // Silently ignore
+      localStorage.removeItem(key)
+    } catch (error) {
+      console.error('Storage REMOVE error:', error)
     }
   },
 
   clear() {
     try {
-      sessionStorage.clear()
-    } catch {
-      // Silently ignore
+      localStorage.clear()
+    } catch (error) {
+      console.error('Storage CLEAR error:', error)
     }
   },
 }
+
+export default storage

@@ -1,25 +1,3 @@
-/**
- * Authentication Context
- *
- * Provides authentication state and authentication actions
- * to the complete frontend application.
- *
- * Backend:
- *   FastAPI + JWT Authentication
- *
- * Responsibilities:
- *   - Store authenticated user
- *   - Store JWT access token
- *   - Login
- *   - Register
- *   - Verify OTP
- *   - Resend OTP
- *   - Forgot password
- *   - Reset password
- *   - Logout
- *   - Restore session from localStorage
- */
-
 import {
   createContext,
   useContext,
@@ -27,52 +5,113 @@ import {
   useCallback,
   useEffect,
 } from 'react'
-
 import { storage } from '../utils/storage'
 import { STORAGE_KEYS } from '../constants/app'
 import authService from '../services/authService'
-import axiosClient from '../config/axiosClient'
-
 // =====================================================
 // Authentication Context
 // =====================================================
-
 const AuthContext = createContext(null)
-
 // =====================================================
 // Auth Provider
 // =====================================================
-
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
-    const user = storage.get(
-      STORAGE_KEYS.USER
-    )
-
-    console.log(
-      '🔐 AuthContext INITIALIZATION'
-    )
-
-    console.log(
-      'User from localStorage:',
-      user
-    )
-
-    console.log(
-      'User role:',
-      user?.role
-    )
-
+    const user = storage.get(STORAGE_KEYS.USER)
+    console.log('🔐 AuthContext INITIALIZATION')
+    console.log('User from localStorage:', user)
+    console.log('User role:', user?.role)
     return user
   })
+  const [isLoading, setIsLoading] = useState(true)
+  const [authError, setAuthError] = useState(null)
+  // =====================================================
+  // RESTORE SESSION ON APPLICATION START
+  // =====================================================
+  useEffect(() => {
+    const restoreSession = async () => {
+      console.log('🔄 Checking existing authentication session...')
+      const accessToken = storage.get(
+        STORAGE_KEYS.ACCESS_TOKEN
+      )
+      const storedUser = storage.get(
+        STORAGE_KEYS.USER
+      )
+      // -------------------------------------------------
+      // No token
+      // -------------------------------------------------
+      if (!accessToken) {
+        console.log('ℹ️ No access token found.')
+        setCurrentUser(null)
+        setIsLoading(false)
+        return
+      }
+      // -------------------------------------------------
+      // Token exists
+      // -------------------------------------------------
+      try {
+        console.log('🔑 Access token found.')
+        console.log('👤 Validating session with /auth/me...')
 
-  const [isLoading, setIsLoading] =
-    useState(false)
+        const response =
+          await authService.getMe()
 
-  const [authError, setAuthError] =
-    useState(null)
+        const user = response.data
+
+        console.log(
+          '✅ Session restored successfully:',
+          user
+        )
+
+        storage.set(
+          STORAGE_KEYS.USER,
+          user
+        )
+
+        setCurrentUser(user)
+
+      } catch (error) {
+
+        console.error(
+          '❌ Session restoration failed:',
+          error
+        )
+
+        // -------------------------------------------------
+        // Token is invalid/expired
+        // -------------------------------------------------
+
+        storage.remove(
+          STORAGE_KEYS.ACCESS_TOKEN
+        )
+
+        storage.remove(
+          STORAGE_KEYS.REFRESH_TOKEN
+        )
+
+        storage.remove(
+          STORAGE_KEYS.USER
+        )
+
+        setCurrentUser(null)
+
+      } finally {
+
+        setIsLoading(false)
+
+      }
+    }
+
+    restoreSession()
+
+  }, [])
+
+  // =====================================================
+  // CURRENT USER DEBUG
+  // =====================================================
 
   useEffect(() => {
+
     console.log(
       '🔄 AuthContext: currentUser changed'
     )
@@ -86,6 +125,7 @@ export function AuthProvider({ children }) {
       'New role:',
       currentUser?.role
     )
+
   }, [currentUser])
 
   // =====================================================
@@ -93,7 +133,9 @@ export function AuthProvider({ children }) {
   // =====================================================
 
   const clearError = useCallback(() => {
+
     setAuthError(null)
+
   }, [])
 
   // =====================================================
@@ -106,6 +148,7 @@ export function AuthProvider({ children }) {
       accessToken,
       refreshToken = null
     ) => {
+
       console.log(
         '💾 storeSession() called'
       )
@@ -137,16 +180,21 @@ export function AuthProvider({ children }) {
         accessToken
       )
 
-      storage.set(
-        STORAGE_KEYS.REFRESH_TOKEN,
-        refreshToken
-      )
+      if (refreshToken) {
+
+        storage.set(
+          STORAGE_KEYS.REFRESH_TOKEN,
+          refreshToken
+        )
+
+      }
 
       setCurrentUser(user)
 
       console.log(
         '✅ Session stored successfully'
       )
+
     },
     []
   )
@@ -157,6 +205,7 @@ export function AuthProvider({ children }) {
 
   const updateCurrentUser = useCallback(
     (updatedUser) => {
+
       console.log(
         '🔄 Updating current user:',
         updatedUser
@@ -168,6 +217,7 @@ export function AuthProvider({ children }) {
       )
 
       setCurrentUser(updatedUser)
+
     },
     []
   )
@@ -177,6 +227,7 @@ export function AuthProvider({ children }) {
   // =====================================================
 
   const clearSession = useCallback(() => {
+
     console.log(
       '🚪 Clearing authentication session'
     )
@@ -194,6 +245,7 @@ export function AuthProvider({ children }) {
     )
 
     setCurrentUser(null)
+
   }, [])
 
   // =====================================================
@@ -202,10 +254,12 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(
     async (credentials) => {
+
       setIsLoading(true)
       setAuthError(null)
 
       try {
+
         console.log(
           '🔐 Login started'
         )
@@ -232,10 +286,16 @@ export function AuthProvider({ children }) {
           data?.access_token
 
         if (!accessToken) {
+
           throw new Error(
             'Access token was not returned by the backend.'
           )
+
         }
+
+        // -------------------------------------------------
+        // Save token BEFORE calling /me
+        // -------------------------------------------------
 
         storage.set(
           STORAGE_KEYS.ACCESS_TOKEN,
@@ -246,14 +306,16 @@ export function AuthProvider({ children }) {
           '✅ Access token stored'
         )
 
+        // -------------------------------------------------
+        // Get authenticated user
+        // -------------------------------------------------
+
         console.log(
           '👤 Fetching authenticated user...'
         )
 
         const userResponse =
-          await axiosClient.get(
-            '/auth/me'
-          )
+          await authService.getMe()
 
         const user =
           userResponse.data
@@ -262,6 +324,10 @@ export function AuthProvider({ children }) {
           '✅ Authenticated user:',
           user
         )
+
+        // -------------------------------------------------
+        // Store complete session
+        // -------------------------------------------------
 
         storeSession(
           user,
@@ -276,6 +342,7 @@ export function AuthProvider({ children }) {
         return user
 
       } catch (error) {
+
         console.error(
           '❌ Login failed:',
           error
@@ -292,8 +359,11 @@ export function AuthProvider({ children }) {
         throw error
 
       } finally {
+
         setIsLoading(false)
+
       }
+
     },
     [storeSession]
   )
@@ -304,10 +374,12 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(
     async (payload) => {
+
       setIsLoading(true)
       setAuthError(null)
 
       try {
+
         console.log(
           '📝 Registration started'
         )
@@ -325,6 +397,7 @@ export function AuthProvider({ children }) {
         }
 
       } catch (error) {
+
         console.error(
           '❌ Registration failed:',
           error
@@ -340,8 +413,65 @@ export function AuthProvider({ children }) {
         throw error
 
       } finally {
+
         setIsLoading(false)
+
       }
+
+    },
+    []
+  )
+
+  // =====================================================
+  // PHARMACY REGISTER
+  // =====================================================
+
+  const registerPharmacy = useCallback(
+    async (payload) => {
+
+      setIsLoading(true)
+      setAuthError(null)
+
+      try {
+
+        console.log(
+          '🏥 Pharmacy registration started'
+        )
+
+        await authService.registerPharmacy(
+          payload
+        )
+
+        console.log(
+          '✅ Pharmacy registration successful'
+        )
+
+        return {
+          email: payload.email,
+        }
+
+      } catch (error) {
+
+        console.error(
+          '❌ Pharmacy registration failed:',
+          error
+        )
+
+        const message =
+          error?.response?.data?.detail ??
+          error?.response?.data?.message ??
+          'Pharmacy registration failed. Please try again.'
+
+        setAuthError(message)
+
+        throw error
+
+      } finally {
+
+        setIsLoading(false)
+
+      }
+
     },
     []
   )
@@ -352,10 +482,12 @@ export function AuthProvider({ children }) {
 
   const verifyOtp = useCallback(
     async (payload) => {
+
       setIsLoading(true)
       setAuthError(null)
 
       try {
+
         console.log(
           '🔢 OTP verification started'
         )
@@ -373,6 +505,7 @@ export function AuthProvider({ children }) {
         return true
 
       } catch (error) {
+
         console.error(
           '❌ OTP verification failed:',
           error
@@ -388,8 +521,11 @@ export function AuthProvider({ children }) {
         throw error
 
       } finally {
+
         setIsLoading(false)
+
       }
+
     },
     []
   )
@@ -400,10 +536,12 @@ export function AuthProvider({ children }) {
 
   const resendOtp = useCallback(
     async (payload) => {
+
       setIsLoading(true)
       setAuthError(null)
 
       try {
+
         console.log(
           '📧 Resending OTP'
         )
@@ -419,6 +557,7 @@ export function AuthProvider({ children }) {
         return true
 
       } catch (error) {
+
         console.error(
           '❌ Resend OTP failed:',
           error
@@ -434,8 +573,11 @@ export function AuthProvider({ children }) {
         throw error
 
       } finally {
+
         setIsLoading(false)
+
       }
+
     },
     []
   )
@@ -446,10 +588,12 @@ export function AuthProvider({ children }) {
 
   const forgotPassword = useCallback(
     async (payload) => {
+
       setIsLoading(true)
       setAuthError(null)
 
       try {
+
         console.log(
           '🔑 Forgot password request'
         )
@@ -467,6 +611,7 @@ export function AuthProvider({ children }) {
         }
 
       } catch (error) {
+
         console.error(
           '❌ Forgot password failed:',
           error
@@ -482,8 +627,11 @@ export function AuthProvider({ children }) {
         throw error
 
       } finally {
+
         setIsLoading(false)
+
       }
+
     },
     []
   )
@@ -494,10 +642,12 @@ export function AuthProvider({ children }) {
 
   const resetPassword = useCallback(
     async (payload) => {
+
       setIsLoading(true)
       setAuthError(null)
 
       try {
+
         console.log(
           '🔐 Reset password started'
         )
@@ -516,6 +666,7 @@ export function AuthProvider({ children }) {
         return true
 
       } catch (error) {
+
         console.error(
           '❌ Reset password failed:',
           error
@@ -531,85 +682,71 @@ export function AuthProvider({ children }) {
         throw error
 
       } finally {
+
         setIsLoading(false)
+
       }
+
     },
     []
   )
-
   // =====================================================
   // LOGOUT
   // =====================================================
-
   const logout = useCallback(() => {
     console.log(
       '🚪 Logging out user'
     )
-
     clearSession()
-
     console.log(
       '✅ Logout completed'
     )
   }, [clearSession])
-
   // =====================================================
   // Context Value
   // =====================================================
-
   const value = {
     currentUser,
-
     isAuthenticated:
       !!currentUser,
-
     isDemo: false,
-
     isLoading,
     authError,
-
     clearError,
     updateCurrentUser,
-
     login,
     register,
+    registerPharmacy,
     verifyOtp,
     resendOtp,
     forgotPassword,
     resetPassword,
     logout,
   }
-
   // =====================================================
   // Provider
   // =====================================================
-
   return (
     <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )
 }
-
 // =====================================================
 // useAuth Hook
 // =====================================================
-
 export function useAuth() {
   const context =
     useContext(AuthContext)
-
   if (!context) {
     throw new Error(
       'useAuth must be used within an AuthProvider'
     )
-  }
 
+  }
   return context
 }
-
 // =====================================================
 // Default Export
 // =====================================================
-
 export default AuthContext

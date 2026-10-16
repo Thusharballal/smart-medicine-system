@@ -1,22 +1,15 @@
 from datetime import datetime
-
 from bson import ObjectId
-
 from app.database.connection import get_database
 from app.schemas.notification_scheme import NotificationCreate
-
-
 class NotificationService:
-
     # ==========================================================
     # Create Notification
     # ==========================================================
     @staticmethod
     async def create_notification(data: NotificationCreate):
         db = get_database()
-
         now = datetime.utcnow()
-
         notification = {
             "user_id": data.user_id,
             "title": data.title,
@@ -29,7 +22,6 @@ class NotificationService:
         }
 
         result = await db.notifications.insert_one(notification)
-
         notification["_id"] = result.inserted_id
 
         return notification

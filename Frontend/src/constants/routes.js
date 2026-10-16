@@ -1,19 +1,11 @@
-/**
- * Route Constants
- *
- * Centralises every route path string used in the application.
- * Importing from here instead of hardcoding strings prevents typos
- * and makes large-scale refactoring safe and straightforward.
- */
-
 // ─── Public Routes ────────────────────────────────────────────────────────────
 export const ROUTES = {
   // Root
   HOME: '/',
-
   // Authentication
   LOGIN: '/login',
   REGISTER: '/register',
+  PHARMACY_REGISTER: '/pharmacy/register',
   VERIFY_OTP: '/verify-otp',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
@@ -30,11 +22,10 @@ export const ROUTES = {
     SEARCH_RESULTS:         '/search/results',
     MEDICINE_DETAIL:        '/medicine/:id',
     GENERIC_RECOMMENDATION: '/medicine/:id/generic',
-    NEARBY_PHARMACIES:      '/pharmacies/nearby',
+    NEARBY_PHARMACIES:      '/pharmacies/nearby/:id',
     NOTIFICATIONS:          '/notifications',
     PROFILE:                '/profile',
   },
-
   // ─── Pharmacy Routes ─────────────────────────────────────────────────────
   PHARMACY: {
     DASHBOARD:            '/pharmacy/dashboard',
@@ -67,3 +58,4 @@ export const ROUTES = {
     SETTINGS:     '/admin/settings',
   },
 }
+export default ROUTES

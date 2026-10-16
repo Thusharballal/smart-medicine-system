@@ -124,3 +124,19 @@ class MedicineAlternativeResponse(BaseModel):
     branded_price: float
     jan_aushadhi_price: float
     savings: float
+# ============================================================
+# PHARMACY MEDICINE AVAILABILITY
+# ============================================================
+class PharmacyMedicineAvailabilityResponse(BaseModel):
+    pharmacy_id: str
+    pharmacy_name: str
+    owner_name: str
+    address: str
+    city: str
+    state: str
+    pin_code: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    kendra_code: str
+    available_quantity: int
+    mrp: float

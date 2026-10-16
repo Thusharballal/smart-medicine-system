@@ -1,14 +1,3 @@
-/**
- * Component: PharmacyDetailsPanel
- *
- * Description:
- *   Detailed information panel for the selected pharmacy including
- *   medicine availability, stock status, amenities, and actions.
- *
- * Backend readiness:
- *   - pharmacy → GET /api/v1/pharmacies/:id
- *   - availability → GET /api/v1/pharmacies/:id/inventory?medicine=...
- */
 
 import {
   HiOutlineMapPin, HiOutlinePhone, HiOutlineClock,

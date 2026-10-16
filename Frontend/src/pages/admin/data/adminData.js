@@ -1,7 +1,3 @@
-/**
- * Admin Portal Placeholder Data
- * TODO: Replace all arrays with TanStack Query API calls once backend is ready.
- */
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 export const USERS = [

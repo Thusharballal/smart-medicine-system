@@ -1,3 +1,4 @@
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.core.security import get_current_user
 from app.schemas.notification_scheme import (
@@ -9,10 +10,13 @@ router = APIRouter(
     prefix="/notifications",
     tags=["Notifications"],
 )
+# ==========================================================
+# SERIALIZE NOTIFICATION
+# ==========================================================
 def serialize_notification(notification: dict) -> dict:
     return {
         "id": str(notification["_id"]),
-        "user_id": notification["user_id"],
+        "user_id": str(notification["user_id"]),
         "title": notification["title"],
         "description": notification["description"],
         "type": notification["type"],
@@ -22,7 +26,36 @@ def serialize_notification(notification: dict) -> dict:
         "read_at": notification.get("read_at"),
     }
 # ==========================================================
-# Create Notification
+# GET CURRENT USER ID
+# ==========================================================
+def get_user_object_id(current_user: dict) -> ObjectId:
+    """
+    Get the MongoDB ObjectId directly from the
+    authenticated MongoDB user document.
+    get_current_user() returns the original MongoDB
+    document, therefore the user ID is stored in `_id`,
+    not `id`.
+    """
+    user_id = current_user.get("_id")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authenticated user ID is missing.",
+        )
+    # Already a MongoDB ObjectId
+    if isinstance(user_id, ObjectId):
+        return user_id
+
+    # Convert string ID to ObjectId if necessary
+    try:
+        return ObjectId(user_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authenticated user ID.",
+        )
+# ==========================================================
+# CREATE NOTIFICATION
 # ==========================================================
 @router.post(
     "",
@@ -33,7 +66,18 @@ async def create_notification(
     data: NotificationCreate,
     current_user: dict = Depends(get_current_user),
 ):
-    if data.user_id != current_user["_id"]:
+    user_id = get_user_object_id(current_user)
+    # ------------------------------------------------------
+    # Verify that notification belongs to current user
+    # ------------------------------------------------------
+    try:
+        requested_user_id = ObjectId(data.user_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID.",
+        )
+    if requested_user_id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only create notifications for yourself.",
@@ -43,8 +87,8 @@ async def create_notification(
     )
     return serialize_notification(notification)
 # ==========================================================
-# Get User Notifications
-# ==========================================================
+# GET USER NOTIFICATIONS
+# =========================================================
 @router.get(
     "",
     response_model=list[NotificationResponse],
@@ -53,7 +97,7 @@ async def get_notifications(
     unread_only: bool = Query(False),
     current_user: dict = Depends(get_current_user),
 ):
-    user_id = current_user["_id"]
+    user_id = get_user_object_id(current_user)
     notifications = (
         await NotificationService.get_user_notifications(
             user_id=user_id,
@@ -64,14 +108,14 @@ async def get_notifications(
         serialize_notification(notification)
         for notification in notifications
     ]
-# ==========================================================
-# Get Unread Count
+# =========================================================
+# GET UNREAD COUNT
 # ==========================================================
 @router.get("/unread-count")
 async def get_unread_count(
     current_user: dict = Depends(get_current_user),
 ):
-    user_id = current_user["_id"]
+    user_id = get_user_object_id(current_user)
     count = await NotificationService.get_unread_count(
         user_id
     )
@@ -79,7 +123,7 @@ async def get_unread_count(
         "unread_count": count
     }
 # ==========================================================
-# Mark One Notification as Read
+# MARK ONE NOTIFICATION AS READ
 # ==========================================================
 @router.patch(
     "/{notification_id}/read",
@@ -89,7 +133,7 @@ async def mark_notification_as_read(
     notification_id: str,
     current_user: dict = Depends(get_current_user),
 ):
-    user_id = current_user["_id"]
+    user_id = get_user_object_id(current_user)
     notification = await NotificationService.mark_as_read(
         notification_id=notification_id,
         user_id=user_id,
@@ -101,13 +145,13 @@ async def mark_notification_as_read(
         )
     return serialize_notification(notification)
 # ==========================================================
-# Mark All Notifications as Read
+# MARK ALL NOTIFICATIONS AS READ
 # ==========================================================
 @router.patch("/read-all")
 async def mark_all_notifications_as_read(
     current_user: dict = Depends(get_current_user),
 ):
-    user_id = current_user["_id"]
+    user_id = get_user_object_id(current_user)
     count = await NotificationService.mark_all_as_read(
         user_id
     )
@@ -116,14 +160,14 @@ async def mark_all_notifications_as_read(
         "updated_count": count,
     }
 # ==========================================================
-# Delete Notification
+# DELETE NOTIFICATION
 # ==========================================================
 @router.delete("/{notification_id}")
 async def delete_notification(
     notification_id: str,
     current_user: dict = Depends(get_current_user),
 ):
-    user_id = current_user["_id"]
+    user_id = get_user_object_id(current_user)
     deleted = await NotificationService.delete_notification(
         notification_id=notification_id,
         user_id=user_id,

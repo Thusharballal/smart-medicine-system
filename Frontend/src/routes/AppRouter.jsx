@@ -19,6 +19,7 @@ function PageLoader() {
 
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
+import PharmacyRegisterPage from '../pages/auth/PharmacyRegisterPage'
 import VerifyOtpPage from '../pages/auth/VerifyOtpPage'
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage'
@@ -30,6 +31,9 @@ import UnauthorizedPage from '../pages/UnauthorizedPage'
 import SessionExpiredPage from '../pages/errors/SessionExpiredPage'
 const HomePage = lazy(() => import('../pages/home/HomePage'))
 const UserDashboard = lazy(() => import('../pages/dashboard/UserDashboard'))
+const PharmacyProfilePage = lazy(
+  () => import('../pages/pharmacy/PharmacyProfilePage')
+)
 const MedicineSearchPage = lazy(() => import('../pages/search/MedicineSearchPage'))
 const SearchResultsPage = lazy(() => import('../pages/results/SearchResultsPage'))
 const MedicineDetailsPage = lazy(() => import('../pages/medicine/MedicineDetailsPage'))
@@ -74,13 +78,19 @@ function AppRouter() {
         </Route>
 
         <Route element={<PublicRoute />}>
-          <Route element={<AuthLayout />}>
-            <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
-            <Route path="verify-otp" element={<VerifyOtpPage />} />
-            <Route path="forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="reset-password" element={<ResetPasswordPage />} />
-          </Route>
+        <Route element={<AuthLayout />}>
+          <Route path="login" element={<LoginPage />} />
+          {/* Patient / User Registration */}
+          <Route path="register" element={<RegisterPage />} />
+          {/* Pharmacy Owner Registration */}
+          <Route
+            path="/pharmacy/register"
+            element={<PharmacyRegisterPage />}
+          />
+          <Route path="verify-otp" element={<VerifyOtpPage />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
+        </Route>
         </Route>
     <Route
       element={
@@ -117,7 +127,7 @@ function AppRouter() {
         />
         {/* Nearby Pharmacies */}
         <Route
-          path="pharmacies/nearby"
+          path="pharmacies/nearby/:id"
           element={<NearbyPharmaciesPage />}
         />
         {/* Notifications */}
@@ -212,7 +222,7 @@ function AppRouter() {
             />
             <Route
               path="pharmacy/profile"
-              element={<ProfilePage />}
+              element={<PharmacyProfilePage />}
             />
           </Route>
         </Route>

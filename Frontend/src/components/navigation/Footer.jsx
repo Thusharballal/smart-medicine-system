@@ -1,28 +1,3 @@
-/**
- * Footer Component
- *
- * Purpose : Site-wide footer for MainLayout public pages.
- *           Provides branding, quick links, contact placeholder,
- *           social media placeholder, and copyright.
- * Location : src/components/navigation/Footer.jsx
- *
- * Features :
- *   - 4-column responsive grid (collapses to 2 on tablet, 1 on mobile)
- *   - Brand column with tagline
- *   - Quick Links column
- *   - Contact info placeholder
- *   - Social media icon row placeholder
- *   - Bottom bar with copyright + version
- *
- * Future modules : Module 4 wires actual contact/social links.
- *
- * Props :
- *   quickLinks   — [{ label, to }]
- *   contactEmail — string
- *   contactPhone — string
- *   showSocials  — boolean (default true)
- */
-
 import { Link } from 'react-router-dom'
 import { MdMedication } from 'react-icons/md'
 import { FiMail, FiPhone, FiMapPin } from 'react-icons/fi'
@@ -198,5 +173,4 @@ function Footer({
     </footer>
   )
 }
-
 export default Footer

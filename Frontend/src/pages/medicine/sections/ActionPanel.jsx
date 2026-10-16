@@ -1,21 +1,3 @@
-/**
- * Component: ActionPanel
- *
- * Description:
- *   Sticky side panel (desktop) / bottom bar (mobile) containing all
- *   primary and secondary actions for the medicine detail page.
- *
- * Responsibilities:
- *   - Compare Medicine, Save Medicine, Share Medicine (with local state)
- *   - Print Information, Download PDF, Report Incorrect Information
- *   - All are UI-only placeholders
- *
- * Backend readiness:
- *   - Save → POST /api/v1/users/me/saved-medicines/:id
- *   - Report → POST /api/v1/medicines/:id/report
- *   - PDF → GET /api/v1/medicines/:id/pdf
- */
-
 import { useState } from 'react'
 import {
   HiOutlineBookmark, HiBookmark,
@@ -149,5 +131,4 @@ const { generic_name = 'Medicine', price } = medicine
     </aside>
   )
 }
-
 export default ActionPanel

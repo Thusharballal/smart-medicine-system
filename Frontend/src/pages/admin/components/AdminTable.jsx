@@ -1,37 +1,24 @@
-/**
- * Component: AdminTable
- *
- * Description:
- * Reusable searchable, sortable, paginated table for admin management pages.
- */
-
 import { useState, useMemo } from 'react'
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineChevronUp,
   HiOutlineChevronDown,
 } from 'react-icons/hi2'
-
 const PAGE_SIZE = 6
-
 function getSafeText(value) {
   if (value === null || value === undefined) {
     return ''
   }
-
   if (Array.isArray(value)) {
     return value.join(', ')
   }
-
   if (typeof value === 'object') {
     return Object.values(value)
       .map((item) => String(item ?? ''))
       .join(' ')
   }
-
   return String(value)
 }
-
 function AdminTable({
   columns = [],
   data = [],

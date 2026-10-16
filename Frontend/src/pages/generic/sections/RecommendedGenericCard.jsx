@@ -24,19 +24,19 @@ import { ROUTES } from '../../../constants/routes'
 // Recommended Generic Card
 // =====================================================
 function RecommendedGenericCard({ generic = {} }) {
-  // TODO: replace with GET /api/v1/medicines/:id/generic-recommendation
-  const {
-    name               = 'Paracetamol IP 500mg',
-    equivalentBrand    = 'Equivalent to Crocin 500',
-    composition        = 'Paracetamol IP 500mg',
-    manufacturer       = 'Jan Aushadhi (BPPI)',
-    qualityMatch       = '98%',
-    price              = 18,
-    brandPrice         = 120,
-    isCompositionMatch = true,
-    isQualityAssured   = true,
-    isJanAushadhi      = true,
-  } = generic
+const {
+  id,
+  name,
+  equivalentBrand,
+  composition,
+  manufacturer,
+  qualityMatch,
+  price,
+  brandPrice,
+  isCompositionMatch,
+  isQualityAssured,
+  isJanAushadhi,
+} = generic
 
   const savings    = brandPrice - price
   const savingsPct = Math.round((savings / brandPrice) * 100)
@@ -123,7 +123,7 @@ function RecommendedGenericCard({ generic = {} }) {
 
             <div className="flex flex-col gap-2">
               <Link
-                to={ROUTES.USER.NEARBY_PHARMACIES}
+                to={`${ROUTES.USER.NEARBY_PHARMACIES}/${generic.id}`}
                 aria-label={`Find ${name} at nearby pharmacies`}
                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-success-600 text-white text-sm font-semibold hover:bg-success-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success-500"
               >

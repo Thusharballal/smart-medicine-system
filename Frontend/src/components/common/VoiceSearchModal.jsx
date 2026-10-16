@@ -1,231 +1,879 @@
 /**
  * VoiceSearchModal
  *
- * Frontend placeholder for Voice Search functionality.
+ * Real browser-based voice search using the Web Speech API.
  *
- * ⚠ PLACEHOLDER — Speech recognition is NOT implemented.
- * TODO: Integrate Web Speech API → window.SpeechRecognition
- *       Backend endpoint: POST /api/v1/search/voice
- *       FastAPI + speech-to-text library (e.g. SpeechBrain, Whisper)
+ * Flow:
  *
- * Current behaviour:
- *   - Shows animated microphone and "Listening…" state
- *   - After 2.5s auto-populates the search box with a demo result
- *   - Calls onResult(text) which parent uses to fill the search input
+ * User speaks:
+ *      "para"
+ *          ↓
+ * SpeechRecognition
+ *          ↓
+ * "para"
+ *          ↓
+ * onResult("para")
+ *          ↓
+ * MedicineSearchPage
  *
- * Props:
- *   isOpen   {boolean}   — controls visibility
- *   onClose  {Function}  — called when modal is dismissed
- *   onResult {Function}  — called with recognised speech text
+ * IMPORTANT:
+ * This component does NOT hardcode medicine names.
+ *
+ * It returns whatever the user actually says.
+ *
+ * Example:
+ *
+ * "para"          → "para"
+ * "paracetamol"   → "paracetamol"
+ * "amox"          → "amox"
+ * "metformin"     → "metformin"
+ *
+ * The medicine search system should then perform
+ * partial/fuzzy matching against the medicine database.
  */
 
-import { useState, useCallback } from 'react'
-import { HiOutlineMicrophone, HiOutlineXMark, HiOutlineStopCircle } from 'react-icons/hi2'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 
-// Demo: simulated speech result after listening period
-// TODO: Replace with real SpeechRecognition API output
-const DEMO_VOICE_RESULTS = [
-  'Paracetamol 500mg',
-  'Dolo 650',
-  'Cetirizine 10mg',
-  'Azithromycin 500',
-]
+import {
+  HiOutlineMicrophone,
+  HiOutlineXMark,
+  HiOutlineStopCircle,
+} from 'react-icons/hi2'
 
-function VoiceSearchModal({ isOpen, onClose, onResult }) {
-  const [phase, setPhase] = useState('idle') // idle | listening | done
-  const [result, setResult] = useState('')
-  // State resets automatically when modal unmounts (isOpen === false returns null below)
+// =====================================================
+// Speech Recognition support
+// =====================================================
 
-  const startListening = useCallback(() => {
-    /**
-     * TODO: Replace this simulation with real Web Speech API:
-     *
-     * const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-     * if (!SpeechRecognition) { alert('Speech recognition not supported'); return }
-     * const recognition = new SpeechRecognition()
-     * recognition.lang = 'en-IN'
-     * recognition.onresult = (e) => {
-     *   const text = e.results[0][0].transcript
-     *   setResult(text); setPhase('done')
-     * }
-     * recognition.start()
-     *
-     * FastAPI backend endpoint (future):
-     * POST /api/v1/search/voice  — accepts audio blob, returns transcription
-     */
-    setPhase('listening')
-    const pick = DEMO_VOICE_RESULTS[Math.floor(Math.random() * DEMO_VOICE_RESULTS.length)]
-    setTimeout(() => {
-      setResult(pick)
-      setPhase('done')
-    }, 2500)
+function getSpeechRecognition() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  return (
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition ||
+    null
+  )
+}
+
+// =====================================================
+// Voice Search Modal
+// =====================================================
+
+function VoiceSearchModal({
+  isOpen,
+  onClose,
+  onResult,
+}) {
+  const [phase, setPhase] =
+    useState('idle')
+  // idle | listening | done | error
+
+  const [result, setResult] =
+    useState('')
+
+  const [error, setError] =
+    useState('')
+
+  const [supported, setSupported] =
+    useState(true)
+
+  const recognitionRef =
+    useRef(null)
+
+  // ===================================================
+  // Check browser support
+  // ===================================================
+
+  useEffect(() => {
+    const Recognition =
+      getSpeechRecognition()
+
+    setSupported(
+      Boolean(Recognition)
+    )
   }, [])
 
-  function handleStop() {
-    setPhase('done')
-    if (!result) {
-      setResult(DEMO_VOICE_RESULTS[0])
+  // ===================================================
+  // Cleanup speech recognition
+  // ===================================================
+
+  const stopRecognition =
+    useCallback(() => {
+      if (
+        recognitionRef.current
+      ) {
+        try {
+          recognitionRef.current.stop()
+        } catch {
+          // Ignore stop errors
+        }
+
+        recognitionRef.current =
+          null
+      }
+    }, [])
+
+  // ===================================================
+  // Cleanup when modal closes/unmounts
+  // ===================================================
+
+  useEffect(() => {
+    if (!isOpen) {
+      stopRecognition()
+
+      setPhase('idle')
+      setResult('')
+      setError('')
     }
+
+    return () => {
+      stopRecognition()
+    }
+  }, [
+    isOpen,
+    stopRecognition,
+  ])
+
+  // ===================================================
+  // Start real voice recognition
+  // ===================================================
+
+  const startListening =
+    useCallback(() => {
+      const Recognition =
+        getSpeechRecognition()
+
+      if (!Recognition) {
+        setSupported(false)
+
+        setPhase('error')
+
+        setError(
+          'Voice search is not supported in this browser. Please use Google Chrome or Microsoft Edge.'
+        )
+
+        return
+      }
+
+      // Stop any existing session
+      stopRecognition()
+
+      setResult('')
+      setError('')
+      setPhase('listening')
+
+      const recognition =
+        new Recognition()
+
+      recognition.continuous = false
+
+      recognition.interimResults =
+        true
+
+      recognition.maxAlternatives =
+        3
+
+      // Indian English
+      recognition.lang =
+        'en-IN'
+
+      // ===============================================
+      // Recognition started
+      // ===============================================
+
+      recognition.onstart = () => {
+        setPhase(
+          'listening'
+        )
+      }
+
+      // ===============================================
+      // Recognition result
+      // ===============================================
+        recognition.onresult = (event) => {
+          let finalTranscript = ''
+          let interimTranscript = ''
+
+          for (
+            let i = event.resultIndex;
+            i < event.results.length;
+            i++
+          ) {
+            const transcript =
+              event.results[i][0]?.transcript || ''
+
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript
+            } else {
+              interimTranscript += transcript
+            }
+          }
+          const finalText = finalTranscript.trim()
+          const interimText = interimTranscript.trim()
+
+          // Show what the user is currently saying
+          if (interimText) {
+            setResult(interimText)
+          }
+
+          // Automatically search when speech is finalized
+          if (finalText) {
+            setResult(finalText)
+            setPhase('done')
+
+            // Automatically send the voice result
+            // to MedicineSearchPage
+            setTimeout(() => {
+              onResult?.(finalText)
+              onClose?.()
+            }, 300)
+          }
+        }
+      // ===============================================
+      // Recognition error
+      // ===============================================
+      recognition.onerror = (
+        event
+      ) => {
+        console.error(
+          'Speech recognition error:',
+          event.error
+        )
+        recognitionRef.current =
+          null
+        setPhase('error')
+        switch (
+          event.error
+        ) {
+          case 'not-allowed':
+          case 'service-not-allowed':
+            setError(
+              'Microphone permission was denied. Please allow microphone access and try again.'
+            )
+            break
+          case 'no-speech':
+            setError(
+              'No speech was detected. Please speak the medicine name and try again.'
+            )
+            break
+          case 'audio-capture':
+            setError(
+              'No microphone was detected. Please check your microphone.'
+            )
+            break
+          case 'network':
+            setError(
+              'Voice recognition requires a network connection. Please check your connection and try again.'
+            )
+            break
+          default:
+            setError(
+              'Voice recognition failed. Please try again.'
+            )
+        }
+      }
+      // ===============================================
+      // Recognition ended
+      // ===============================================
+      recognition.onend = () => {
+        recognitionRef.current =
+          null
+        setPhase(
+          (currentPhase) =>
+            currentPhase ===
+            'listening'
+              ? result
+                ? 'done'
+                : 'idle'
+              : currentPhase
+        )
+      }
+      recognitionRef.current =
+        recognition
+      try {
+        recognition.start()
+      } catch (err) {
+        console.error(
+          'Unable to start speech recognition:',
+          err
+        )
+
+        recognitionRef.current =
+          null
+
+        setPhase('error')
+
+        setError(
+          'Unable to start voice recognition. Please try again.'
+        )
+      }
+    }, [
+      stopRecognition,
+      result,
+    ])
+  // ===================================================
+  // Stop listening
+  // ===================================================
+  const handleStop =
+    useCallback(() => {
+      if (
+        recognitionRef.current
+      ) {
+        try {
+          recognitionRef.current.stop()
+        } catch {
+          // Ignore stop errors
+        }
+      }
+      recognitionRef.current =
+        null
+      setPhase(
+        result
+          ? 'done'
+          : 'idle'
+      )
+    }, [result])
+  // ===================================================
+  // Use recognized result
+  // ===================================================
+  const handleUseResult =
+    useCallback(() => {
+      const trimmed =
+        result.trim()
+
+      if (!trimmed) {
+        return
+      }
+      onResult?.(trimmed)
+      onClose?.()
+    }, [
+      result,
+      onResult,
+      onClose,
+    ])
+  // ===================================================
+  // Retry
+  // ===================================================
+  const handleRetry =
+    useCallback(() => {
+      setResult('')
+      setError('')
+      setPhase('idle')
+    }, [])
+  // ===================================================
+  // Close
+  // ===================================================
+  const handleClose =
+    useCallback(() => {
+      stopRecognition()
+      setPhase('idle')
+      setResult('')
+      setError('')
+      onClose?.()
+    }, [
+      stopRecognition,
+      onClose,
+    ])
+  // ===================================================
+  // Don't render when closed
+  // ===================================================
+  if (!isOpen) {
+    return null
   }
-
-  function handleUseResult() {
-    onResult?.(result)
-    onClose?.()
-  }
-
-  if (!isOpen) return null
-
+  // ===================================================
+  // Render
+  // ===================================================
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="voice-modal-title"
-      className="fixed inset-0 z-[400] flex items-center justify-center p-4"
+      className="
+        fixed
+        inset-0
+        z-[400]
+        flex
+        items-center
+        justify-center
+        p-4
+      "
     >
-      {/* Backdrop */}
+      {/* =============================================
+          Backdrop
+      ============================================= */}
       <div
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
-        onClick={onClose}
+        className="
+          absolute
+          inset-0
+          bg-slate-900/50
+          backdrop-blur-sm
+        "
+        onClick={handleClose}
         aria-hidden="true"
       />
-
-      {/* Modal panel */}
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center gap-5">
-
-        {/* Close */}
+      {/* =============================================
+          Modal
+      ============================================= */}
+      <div
+        className="
+          relative
+          flex
+          w-full
+          max-w-sm
+          flex-col
+          items-center
+          gap-5
+          rounded-2xl
+          bg-white
+          p-6
+          shadow-xl
+        "
+      >
+        {/* ===========================================
+            Close
+        =========================================== */}
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleClose}
           aria-label="Close voice search"
-          className="absolute top-4 right-4 flex items-center justify-center w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          className="
+            absolute
+            right-4
+            top-4
+            flex
+            h-8
+            w-8
+            items-center
+            justify-center
+            rounded-full
+            text-slate-400
+            transition-colors
+            hover:bg-slate-100
+            focus-visible:outline-none
+            focus-visible:ring-2
+            focus-visible:ring-primary-500
+          "
         >
-          <HiOutlineXMark size={18} aria-hidden="true" />
+          <HiOutlineXMark
+            size={18}
+            aria-hidden="true"
+          />
         </button>
-
-        {/* Title */}
+        {/* ===========================================
+            Title
+        =========================================== */}
         <div className="text-center">
-          <h2 id="voice-modal-title" className="text-base font-bold text-slate-900 flex items-center gap-2 justify-center">
-            <HiOutlineMicrophone size={18} className="text-primary-600" aria-hidden="true" />
+          <h2
+            id="voice-modal-title"
+            className="
+              flex
+              items-center
+              justify-center
+              gap-2
+              text-base
+              font-bold
+              text-slate-900
+            "
+          >
+            <HiOutlineMicrophone
+              size={18}
+              className="text-primary-600"
+              aria-hidden="true"
+            />
             Voice Search
           </h2>
-          <p className="text-xs text-slate-500 mt-1">Speak the medicine name</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Speak the medicine name
+          </p>
         </div>
-
-        {/* Microphone animation */}
+        {/* ===========================================
+            Microphone animation
+        =========================================== */}
         <div className="relative flex items-center justify-center">
-          {/* Pulse rings — shown while listening */}
-          {phase === 'listening' && (
+
+          {phase ===
+            'listening' && (
             <>
-              <span className="absolute w-24 h-24 rounded-full bg-primary-100 animate-ping opacity-40" aria-hidden="true" />
-              <span className="absolute w-20 h-20 rounded-full bg-primary-100 animate-ping opacity-30 delay-75" aria-hidden="true" />
+              <span
+                className="
+                  absolute
+                  h-24
+                  w-24
+                  animate-ping
+                  rounded-full
+                  bg-primary-100
+                  opacity-40
+                "
+                aria-hidden="true"
+              />
+
+              <span
+                className="
+                  absolute
+                  h-20
+                  w-20
+                  animate-ping
+                  rounded-full
+                  bg-primary-100
+                  opacity-30
+                "
+                aria-hidden="true"
+              />
             </>
           )}
-          <div className={`flex items-center justify-center w-16 h-16 rounded-full transition-colors ${
-            phase === 'listening' ? 'bg-primary-600' : phase === 'done' ? 'bg-success-600' : 'bg-slate-100'
-          }`}>
+          <div
+            className={`
+              flex
+              h-16
+              w-16
+              items-center
+              justify-center
+              rounded-full
+              transition-colors
+              ${
+                phase ===
+                'listening'
+                  ? 'bg-primary-600'
+                  : phase === 'done'
+                    ? 'bg-success-600'
+                    : phase === 'error'
+                      ? 'bg-danger-100'
+                      : 'bg-slate-100'
+              }
+            `}
+          >
             <HiOutlineMicrophone
               size={28}
-              className={phase === 'listening' || phase === 'done' ? 'text-white' : 'text-slate-400'}
+              className={`
+                ${
+                  phase ===
+                    'listening' ||
+                  phase === 'done'
+                    ? 'text-white'
+                    : phase === 'error'
+                      ? 'text-danger-600'
+                      : 'text-slate-400'
+                }
+              `}
               aria-hidden="true"
             />
           </div>
         </div>
-
-        {/* Status text */}
-        <div className="text-center min-h-[3rem] flex flex-col items-center justify-center">
-          {phase === 'idle' && (
-            <p className="text-sm text-slate-600">Press the button to start speaking</p>
-          )}
-          {phase === 'listening' && (
-            <p className="text-sm font-semibold text-primary-700 animate-pulse">
-              Listening…
+        {/* ===========================================
+            Status
+        =========================================== */}
+        <div
+          className="
+            flex
+            min-h-[4rem]
+            flex-col
+            items-center
+            justify-center
+            text-center
+          "
+        >
+          {phase ===
+            'idle' && (
+            <p className="text-sm text-slate-600">
+              Press the button to start
+              speaking
             </p>
           )}
-          {phase === 'done' && result && (
+
+          {phase ===
+            'listening' && (
             <>
-              <p className="text-xs text-slate-500 mb-1">Detected:</p>
-              <p className="text-base font-bold text-slate-900 bg-primary-50 px-4 py-1.5 rounded-lg">
-                {result}
+              <p
+                className="
+                  animate-pulse
+                  text-sm
+                  font-semibold
+                  text-primary-700
+                "
+              >
+                Listening…
               </p>
+              {result && (
+                <p className="mt-1 text-xs text-slate-500">
+                  {result}
+                </p>
+              )}
             </>
           )}
-        </div>
+          {phase ===
+            'done' &&
+            result && (
+              <>
+                <p className="mb-1 text-xs text-slate-500">
+                  You said:
+                </p>
 
-        {/* Example phrases */}
-        <div className="w-full bg-slate-50 rounded-xl px-4 py-3">
-          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">
+                <p
+                  className="
+                    rounded-lg
+                    bg-primary-50
+                    px-4
+                    py-1.5
+                    text-base
+                    font-bold
+                    text-slate-900
+                  "
+                >
+                  {result}
+                </p>
+              </>
+            )}
+          {phase ===
+            'error' && (
+            <p className="text-center text-xs font-medium text-danger-600">
+              {error}
+            </p>
+          )}
+        </div>
+        {/* ===========================================
+            Examples
+        =========================================== */}
+        <div
+          className="
+            w-full
+            rounded-xl
+            bg-slate-50
+            px-4
+            py-3
+          "
+        >
+          <p
+            className="
+              mb-2
+              text-[10px]
+              font-semibold
+              uppercase
+              tracking-widest
+              text-slate-500
+            "
+          >
             Try saying
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {['"Paracetamol"', '"Dolo 650"', '"Cetirizine"'].map(ex => (
-              <span key={ex} className="text-xs text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
-                {ex}
-              </span>
-            ))}
+            {[
+              '"Paracetamol"',
+              '"para"',
+              '"Amoxicillin"',
+              '"met"',
+            ].map(
+              (example) => (
+                <span
+                  key={example}
+                  className="
+                    rounded-full
+                    border
+                    border-slate-200
+                    bg-white
+                    px-2
+                    py-0.5
+                    text-xs
+                    text-slate-600
+                  "
+                >
+                  {example}
+                </span>
+              )
+            )}
           </div>
         </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2 w-full">
-          {phase === 'idle' && (
+        {/* ===========================================
+            Buttons
+        =========================================== */}
+        <div className="flex w-full gap-2">
+          {/* Idle */}
+          {phase ===
+            'idle' && (
             <button
               type="button"
-              onClick={startListening}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              onClick={
+                startListening
+              }
+              disabled={
+                !supported
+              }
+              className="
+                flex
+                flex-1
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                bg-primary-600
+                py-2.5
+                text-sm
+                font-bold
+                text-white
+                transition-colors
+                hover:bg-primary-700
+                disabled:cursor-not-allowed
+                disabled:opacity-50
+              "
             >
-              <HiOutlineMicrophone size={16} aria-hidden="true" />
+              <HiOutlineMicrophone
+                size={16}
+                aria-hidden="true"
+              />
               Start Listening
             </button>
           )}
-          {phase === 'listening' && (
+          {/* Listening */}
+          {phase ===
+            'listening' && (
             <>
               <button
                 type="button"
-                onClick={handleStop}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-danger-600 text-white text-sm font-bold hover:bg-danger-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-500"
+                onClick={
+                  handleStop
+                }
+                className="
+                  flex
+                  flex-1
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  bg-danger-600
+                  py-2.5
+                  text-sm
+                  font-bold
+                  text-white
+                  transition-colors
+                  hover:bg-danger-700
+                "
               >
-                <HiOutlineStopCircle size={16} aria-hidden="true" />
+                <HiOutlineStopCircle
+                  size={16}
+                  aria-hidden="true"
+                />
                 Stop
               </button>
+
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                onClick={
+                  handleClose
+                }
+                className="
+                  rounded-xl
+                  border
+                  border-slate-200
+                  px-4
+                  py-2.5
+                  text-sm
+                  font-semibold
+                  text-slate-600
+                  hover:bg-slate-50
+                "
               >
                 Cancel
               </button>
             </>
           )}
+          {/* Done */}
           {phase === 'done' && (
             <>
+              <div className="flex-1 flex items-center justify-center py-2.5">
+                <span className="text-sm font-semibold text-primary-700">
+                  Searching for "{result}"…
+                </span>
+              </div>
               <button
                 type="button"
-                onClick={handleUseResult}
-                className="flex-1 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-              >
-                Search This
-              </button>
-              <button
-                type="button"
-                onClick={() => { setPhase('idle'); setResult('') }}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                onClick={() => {
+                  setPhase('idle')
+                  setResult('')
+                  setError('')
+                }}
+                className="
+                  px-4 py-2.5 rounded-xl
+                  border border-slate-200
+                  text-slate-600
+                  text-sm font-semibold
+                  hover:bg-slate-50
+                  transition-colors
+                "
               >
                 Retry
               </button>
             </>
           )}
-        </div>
+          {/* Error */}
+          {phase ===
+            'error' && (
+            <>
+              <button
+                type="button"
+                onClick={
+                  handleRetry
+                }
+                className="
+                  flex
+                  flex-1
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-primary-600
+                  py-2.5
+                  text-sm
+                  font-bold
+                  text-white
+                  hover:bg-primary-700
+                "
+              >
+                Try Again
+              </button>
 
-        {/* Placeholder notice */}
-        {/* TODO: Integrate Web Speech API (SpeechRecognition) for real voice input.
-                  Backend: POST /api/v1/search/voice — FastAPI + Whisper/SpeechBrain OCR.
-                  This is a frontend placeholder only. */}
-        <p className="text-[10px] text-slate-400 text-center">
-          🎤 Voice Search placeholder — Speech recognition not yet implemented.
-        </p>
+              <button
+                type="button"
+                onClick={
+                  handleClose
+                }
+                className="
+                  rounded-xl
+                  border
+                  border-slate-200
+                  px-4
+                  py-2.5
+                  text-sm
+                  font-semibold
+                  text-slate-600
+                  hover:bg-slate-50
+                "
+              >
+                Close
+              </button>
+            </>
+          )}
+        </div>
+        {/* ===========================================
+            Browser support notice
+        =========================================== */}
+        {!supported && (
+          <p className="text-center text-[10px] text-danger-500">
+            Voice search is not supported
+            in this browser. Please use
+            Google Chrome or Microsoft Edge.
+          </p>
+        )}
+        {supported && (
+          <p className="text-center text-[10px] text-slate-400">
+            Voice recognition uses your
+            browser microphone.
+          </p>
+        )}
       </div>
     </div>
   )
 }
-
 export default VoiceSearchModal
